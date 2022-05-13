@@ -1769,7 +1769,7 @@ install_module()
 {
 	local module_name=
 	local base_dir=$DEFAULT_PROGRAM_PATH	
-	local force=false	
+	local force=false
 
 
 	if [ $# -gt 2 ]; then
@@ -1831,6 +1831,12 @@ install_module()
 			# Move tmp file to main location
 			lecho "Moving runtime file $j to $deploy_path/$filename.so"
 			sudo mv $j $deploy_path/$filename.so
+
+			# so and py versions of same module are mutually exclusive
+			if [ -f "$deploy_path/$filename.py" ]; then
+				sudo rm "$deploy_path/$filename.py"
+			fi
+
 		elif [[ $name == *.json ]]; then					
 			# Move tmp file to main location
 			lecho "Moving conf file $j to $deploy_path/conf/$filename.json"
@@ -1839,6 +1845,11 @@ install_module()
 			# Move tmp file to main location
 			lecho "Moving runtime file $j to $deploy_path/$filename.py"
 			sudo mv $j $deploy_path/$filename.py
+
+			# so and py versions of same module are mutually exclusive
+			if [ -f "$deploy_path/$filename.so" ]; then
+				sudo rm "$deploy_path/$filename.so"
+			fi			
 		fi
 
 	done
