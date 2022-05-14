@@ -1404,7 +1404,8 @@ check_create_virtual_environment()
 
 
 	if [ ! -d "$PYTHON_VIRTUAL_ENV_LOCATION" ]; then	
-		mkdir -p 755 "$PYTHON_VIRTUAL_ENV_LOCATION"
+		mkdir -p "$PYTHON_VIRTUAL_ENV_LOCATION"
+		sudo chown -R $USER: "$PYTHON_VIRTUAL_ENV_LOCATION"
 	fi	
 
 	python=$(which python$PYTHON_VERSION)
@@ -2490,7 +2491,8 @@ auto_install_program()
 
 
 	if [ ! -d "$DEFAULT_PROGRAM_PATH" ]; then
-		sudo mkdir -p -m 755 "$DEFAULT_PROGRAM_PATH"
+		sudo mkdir -p -m "$DEFAULT_PROGRAM_PATH"
+		sudo chown -R $USER: "$DEFAULT_PROGRAM_PATH"
 	fi
 
 
@@ -3284,6 +3286,11 @@ load_configuration()
 	# Set install location if not set
 
 	CURRENT_DIRECTORY=$PWD
+
+
+	if [ -z ${PROGRAM_FOLDER_NAME+x} ]; then 
+		PROGRAM_FOLDER_NAME=$PROGRAM_NAME
+	fi
 	
 
 	if [ -z ${PROGRAM_INSTALL_LOCATION+x} ]; then 
