@@ -1878,90 +1878,98 @@ install_module()
 	local base_dir=$DEFAULT_PROGRAM_PATH	
 	local force=false
 
+	check_current_installation 1
 
-	if [ $# -gt 2 ]; then
-	 	module_name=$1
-		base_dir=$2
-		force=$3
-	elif [ $# -gt 1 ]; then
-		module_name=$1
-		base_dir=$2
-	elif [ $# -gt 0 ]; then
-		module_name=$1 
-	else
-		lecho_err "Minimum of 1 parameter is required!"
-	fi
+	if [ "$program_exists" -eq 1 ]; then
 
 
-	local url=$(get_module_url $module_name)
-	local deploy_path="$base_dir/oneadmin/modules"
-	local module_conf="$deploy_path/conf/$module_name.json"
-
-
-	if [ -z "$url" ]; then
-	
-		lecho_err "Module not found/cannot be installed!" && exit
-	
-	elif [ -f "$module_conf" ]; then
-
-		if [ "$force" = false ] ; then
-
-			local response=
-			lecho "Module already exists. Proceeding forward operation will overwrite the existing module."
-			read -r -p "Do you wish to continue? [y/N] " response
-				case $response in
-				[yY][eE][sS]|[yY]) 
-					lecho "Installing module.."
-				;;
-				*)
-					lecho "Module installation cancelled" && exit
-				;;
-				esac
+		if [ $# -gt 2 ]; then
+			module_name=$1
+			base_dir=$2
+			force=$3
+		elif [ $# -gt 1 ]; then
+			module_name=$1
+			base_dir=$2
+		elif [ $# -gt 0 ]; then
+			module_name=$1 
+		else
+			lecho_err "Minimum of 1 parameter is required!"
 		fi
-	fi
 
-	# ALL OK -> Do Ops
-	
-	local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
-	local module="$tmp_dir/$module_name.zip"	
-	local dest="$tmp_dir/$module_name"
 
-	sudo wget -O "$module" "$url"
-	sudo unzip $module -d "$tmp_dir/$module_name"
+		local url=$(get_module_url $module_name)
+		local deploy_path="$base_dir/oneadmin/modules"
+		local module_conf="$deploy_path/conf/$module_name.json"
 
-	for j in $(find $dest -type f -print)
-	do				
-		local name=$(basename -- "$j")
-		local filename="${name%.*}"
 
-		if [[ $name == *$current_python.so ]]; then					
-			# Move tmp file to main location
-			lecho "Moving runtime file $j to $deploy_path/$filename.so"
-			sudo mv $j $deploy_path/$filename.so
+		if [ -z "$url" ]; then
+		
+			lecho_err "Module not found/cannot be installed!" && exit
+		
+		elif [ -f "$module_conf" ]; then
 
-			# so and py versions of same module are mutually exclusive
-			if [ -f "$deploy_path/$filename.py" ]; then
-				sudo rm "$deploy_path/$filename.py"
+			if [ "$force" = false ] ; then
+
+				local response=
+				lecho "Module already exists. Proceeding forward operation will overwrite the existing module."
+				read -r -p "Do you wish to continue? [y/N] " response
+					case $response in
+					[yY][eE][sS]|[yY]) 
+						lecho "Installing module.."
+					;;
+					*)
+						lecho "Module installation cancelled" && exit
+					;;
+					esac
+			fi
+		fi
+
+		# ALL OK -> Do Ops
+		
+		local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
+		local module="$tmp_dir/$module_name.zip"	
+		local dest="$tmp_dir/$module_name"
+
+		sudo wget -O "$module" "$url"
+		sudo unzip $module -d "$tmp_dir/$module_name"
+
+		for j in $(find $dest -type f -print)
+		do				
+			local name=$(basename -- "$j")
+			local filename="${name%.*}"
+
+			if [[ $name == *$current_python.so ]]; then					
+				# Move tmp file to main location
+				lecho "Moving runtime file $j to $deploy_path/$filename.so"
+				sudo mv $j $deploy_path/$filename.so
+
+				# so and py versions of same module are mutually exclusive
+				if [ -f "$deploy_path/$filename.py" ]; then
+					sudo rm "$deploy_path/$filename.py"
+				fi
+
+			elif [[ $name == *.json ]]; then					
+				# Move tmp file to main location
+				lecho "Moving conf file $j to $deploy_path/conf/$filename.json"
+				sudo mv $j $deploy_path/conf/$filename.json
+			elif [[ $name == *.py ]]; then					
+				# Move tmp file to main location
+				lecho "Moving runtime file $j to $deploy_path/$filename.py"
+				sudo mv $j $deploy_path/$filename.py
+
+				# so and py versions of same module are mutually exclusive
+				if [ -f "$deploy_path/$filename.so" ]; then
+					sudo rm "$deploy_path/$filename.so"
+				fi			
 			fi
 
-		elif [[ $name == *.json ]]; then					
-			# Move tmp file to main location
-			lecho "Moving conf file $j to $deploy_path/conf/$filename.json"
-			sudo mv $j $deploy_path/conf/$filename.json
-		elif [[ $name == *.py ]]; then					
-			# Move tmp file to main location
-			lecho "Moving runtime file $j to $deploy_path/$filename.py"
-			sudo mv $j $deploy_path/$filename.py
+		done
 
-			# so and py versions of same module are mutually exclusive
-			if [ -f "$deploy_path/$filename.so" ]; then
-				sudo rm "$deploy_path/$filename.so"
-			fi			
-		fi
-
-	done
-
-	lecho "Processing completed. You may want to restart $PROGRAM_NAME service"
+		lecho "Processing completed. You may want to restart $PROGRAM_NAME service"
+	
+	else
+		lecho_err "Program core was not found. Please install the program before attempting to install modules."
+	fi
 
 }
 
