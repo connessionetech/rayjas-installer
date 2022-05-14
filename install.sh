@@ -1477,6 +1477,7 @@ install_from_url()
 			# Extraction successful - copy to main location
 			lecho "Moving files to program location $DEFAULT_PROGRAM_PATH"
 			sudo cp -R "$TMP_DIR"/. "$DEFAULT_PROGRAM_PATH/"	
+			sudo chown -R $USER: "$DEFAULT_PROGRAM_PATH"
 			if [ -f "$DEFAULT_PROGRAM_PATH/$PYTHON_MAIN_FILE" ]; then	
 				# Copying successful 
 				lecho "files copied to program path"
