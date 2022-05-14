@@ -43,7 +43,7 @@ PROGRAM_SERVICE_LOCATION=/lib/systemd/system
 PROGRAM_SERVICE_NAME=grahil.service
 DEFAULT_PROGRAM_PATH=/usr/local/grahil
 
-PROGRAM_INSTALL_REPORT_NAME=report.json
+PROGRAM_INSTALL_REPORT_NAME="report.json"
 
 
 IS_64_BIT=0
@@ -510,6 +510,37 @@ check_git()
 	lecho "git utility not found."
 	fi
 }
+
+
+
+
+#############################################
+# Check if curl module is available on the 
+# linux system. If true then curl_check_success 
+# is set to 1, otherwise 0.
+#
+# GLOBALS:
+#		curl_check_success
+# ARGUMENTS:
+#		
+# RETURN:
+#	
+#############################################
+check_curl()
+{
+	write_log "Checking for curl utility"	
+	curl_check_success=0
+
+	if isinstalled curl; then
+	curl_check_success=1
+	write_log "curl utility was found"
+	else
+	curl_check_success=0
+	lecho "curl utility not found."
+	fi
+}
+
+
 
 
 
@@ -1075,6 +1106,30 @@ install_git()
 
 
 
+
+#############################################
+# Installs curl utility on linux system
+# GLOBALS:
+#
+# ARGUMENTS:
+#
+# RETURN:
+#	
+#############################################
+install_curl()
+{
+	write_log "Installing curl"
+
+	if isDebian; then
+	install_curl_deb	
+	else
+	install_curl_rhl
+	fi		
+}
+
+
+
+
 #############################################
 # Installs wget utility on linux system
 # GLOBALS:
@@ -1157,6 +1212,52 @@ install_git_rhl()
 	local install_loc="$(which git)";
 	lecho "git installed at $install_loc"
 }
+
+
+
+#############################################
+# Installs curl on Debian
+# GLOBALS:
+#
+# ARGUMENTS:
+#
+# RETURN:
+#	
+#############################################
+install_curl_deb()
+{
+	write_log "Installing curl on debian"
+
+	sudo apt-get install -y curl
+
+	local install_loc="$(which curl)";
+	lecho "curl installed at $install_loc"
+}
+
+
+
+
+#############################################
+# Installs curl on RHLE/CentOS
+# GLOBALS:
+#
+# ARGUMENTS:
+#
+# RETURN:
+#	
+#############################################
+install_curl_rhl()
+{
+	write_log "Installing curl on rhle"
+
+	# yup update
+	sudo yum -y install curl
+
+	local install_loc="$(which curl)";
+	lecho "curl installed at $install_loc"
+}
+
+
 
 
 
@@ -1310,7 +1411,7 @@ check_create_virtual_environment()
 	pipver=$(which pip3)
 
 	$python -m pip install --upgrade pip	
-	$pipver install --upgrade setuptools
+	$pipver install --upgrade setuptools wheel
 	
 
 	if [ ! -d "$VENV_FOLDER" ]; then
@@ -1372,6 +1473,10 @@ activate_virtual_environment()
 
 	if [ -d "$VENV_FOLDER" ] && [ -f "$VENV_FOLDER/bin/activate" ]; then		
 		source "$VENV_FOLDER/bin/activate"
+		
+		local pipver=$(which pip3)		
+		$pipver install --upgrade setuptools wheel
+
 		local path=$(pip -V)
 		if [[ $path == *"$VENV_FOLDER"* ]]; then
 			virtual_environment_valid=1	
@@ -3195,9 +3300,11 @@ load_configuration()
 	if [ -z ${PROGRAM_MANIFEST_LOCATION+x} ]; then 
 		PROGRAM_MANIFEST_LOCATION=$(echo 'aHR0cHM6Ly9ncmFoaWwuczMuYW1hem9uYXdzLmNvbS9tYW5pZmVzdC5qc29uCg==' | base64 --decode)
 	fi
+	
 
 	PROGRAM_INSTALLATION_REPORT_FILE="$DEFAULT_PROGRAM_PATH/$PROGRAM_INSTALL_REPORT_NAME"
 	PROGRAM_ARCHIVE_NAME="$PROGRAM_NAME.zip"
+	PROGRAM_SERVICE_NAME="$PROGRAM_NAME.service"
 }
 
 
@@ -3428,6 +3535,7 @@ prerequisites()
 	prerequisites_git	
 	prerequisites_unzip
 	prerequisites_wget
+	prerequisites_curl
 	prerequisites_bc
 }
 
@@ -3616,6 +3724,33 @@ prerequisites_mail()
 		sleep 2
 
 		install_mail
+	fi 
+}
+
+
+
+
+#############################################
+# Checks for and installs curl if not found
+# 
+# GLOBALS:
+#		curl_check_success
+# ARGUMENTS:
+#
+# RETURN:
+#	
+#############################################
+prerequisites_curl()
+{
+	
+	check_curl
+
+
+	if [[ $curl_check_success -eq 0 ]]; then
+		echo "Installing curl..."
+		sleep 2
+
+		install_curl
 	fi 
 }
 
