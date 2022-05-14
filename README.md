@@ -14,7 +14,7 @@ The installer script use mix of `bash` ansd `python 3.7+` to install and update 
 
 * Min CPU Speed: 1 GHZ
 * Min Memory: 256 MB
-* CPU ARCH: 64/32 Bit Intel/AMD or 64/32 Bit ARM
+* CPU ARCH: 64/32 Bit Intel/AMD 64 bit
 * OS: RedHat, Ubuntu 16+, CentOS 7+
 
 __**Coming soon: (Raspian, ARMbian, Ubuntu For ARM)**__
@@ -28,6 +28,7 @@ __**Coming soon: (Raspian, ARMbian, Ubuntu For ARM)**__
 * Execute the following command to switch directory to the installer script and make it executable - `cd grahil-installer && sudo chmod +x *.sh`
 
 ### Basic Usage (Simple Install)
+---
 
 * Run the script by typing - `./install.sh`.
 
@@ -61,6 +62,7 @@ sudo systemctl start grahil.service
 
 
 ## Functionality & Mechanisms
+---
 
 ### The Manifest
 
@@ -78,7 +80,7 @@ The manifest is a JSON fornmatted file which is used to describe the installatio
         "platform": {
             "x86_64": {
                 "enabled": true,
-                "url": "https://*****************/core/x86_64/grahil.zip",
+                "url": "https://*****************/************/grahil.zip",
                 "md5": "6dafac4c971e23b0beee60ce92a072f4",
                 "dependencies": {
                     "interpreters": "3.7,3.8"
@@ -114,6 +116,7 @@ The manifest is a JSON fornmatted file which is used to describe the installatio
 
 
 ### Basic Install Process
+---
 
 **COMMAND**
 
@@ -138,9 +141,10 @@ From the installer's standpoint, the `installation` process can broadly be broke
 * Setup python virtual environment for the python version identified or installed earlier
 * Create a systemd service for grahil using the main entry file & virtual environment interpreter
 
-#### Modules
+### Modules
+---
 
-### Installing modules
+#### Installing modules
 
 ```bash
 ./install.sh -i -m <module-name>
@@ -152,7 +156,7 @@ Where `-i` instructs to run script in installation mode & the `-m` flag selects 
 
 __You need to restart grahil service for changes to take effect.__
 
-### Removing modules
+#### Removing modules
 
 ```bash
 ./install.sh -r -m <module-name>
@@ -165,6 +169,7 @@ Where `-r` instructs to run script in removal mode & the `-m` flag selects modul
 __You need to restart grahil service for changes to take effect.__
 
 ### Update Process
+---
 
 **COMMAND**
 
@@ -184,6 +189,7 @@ From the installer's standpoint, the `update` process can broadly be broken down
 * Update the systemd service if necessary
 
 #### SmartMerge
+
 
 `Smartmerge` is a python program that is used to merge configuration files from existing version of the software and the latest version of the software downloaded, without losing the edited configurations. Smartmerge script reuses the grahil virtual environment for its dependencies and hence does not require setting up a new python virtual environment.
 
