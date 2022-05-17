@@ -23,9 +23,35 @@ __**Coming soon: (Raspian, ARMbian, Ubuntu For ARM)**__
 
 ### Download the installer to your target system
 
-* Clone the repository on your linux system using git client - `git clone https://github.com/connessionetech/grahil-installer.git`
+* The installer needs to be downloaded from its github repo which in turn requires `git` to be installed on the system. You can install `git` in the following ways:
+
+##### Installing git on Debain/Ubuntu
+
+```bash
+sudo apt-get update
+sudo apt-get install git
+```
+
+##### Installing git on CentOs/RHLE
+
+```bash
+sudo yum update
+sudo yum install git
+```
+
+##### Verify git installation
+
+```bash
+git --version
+```
+
+Now using git clone the repository on your linux system on which you wish tro install grahil - `git clone https://github.com/connessionetech/grahil-installer.git`
+
+### Give executable permissions to the installer script
 
 * Execute the following command to switch directory to the installer script and make it executable - `cd grahil-installer && sudo chmod +x *.sh`
+
+**Now we are ready to run the installer!!**
 
 ### Basic Usage (Simple Install)
 ---
