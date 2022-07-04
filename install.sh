@@ -25,6 +25,8 @@ args_update_mode=
 args_install_request=
 args_requirements_file=
 args_module_name=v
+args_profile_request=
+args_profile_name=
 
 
 
@@ -1781,6 +1783,41 @@ get_module_url()
 
 
 #############################################
+# Returns profile package download url (if exists), 
+# using the main program package url and profile name.
+# empty variable/unset variable is returned if profile
+# does not exist (owing to incorrect name)
+# This method does not check if url exists or not
+# 
+# GLOBALS:
+#		PROGRAM_ARCHIVE_LOCATION#
+# ARGUMENTS:
+#		$1 : profile name
+# RETURN:
+#		profile download url (if exists). Else
+# empty variable/unset variable is returned
+#############################################
+get_profile_url()
+{
+	local profile_name="$1.zip"
+	local url=$PROGRAM_ARCHIVE_LOCATION
+	url=$(echo "$url" | sed "s/core/profiles/")
+	url=$(echo "$url" | sed "s/grahil.zip/$profile_name/")
+	url=$(echo "$url" | sed "s#$PLATFORM_ARCH/##")	
+
+	if http_file_exists $url; then
+		echo $url
+	else
+		local NULL
+		echo $NULL
+	fi
+}
+
+
+
+
+
+#############################################
 # Check if file exists over a http url
 # 
 # GLOBALS:
@@ -1877,13 +1914,24 @@ install_module()
 	local module_name=
 	local base_dir=$DEFAULT_PROGRAM_PATH	
 	local force=false
+	local return_status=0
+	local error=1
 
 	check_current_installation 1
 
 	if [ "$program_exists" -eq 1 ]; then
 
+		if [ $# -gt 3 ]; then
+			module_name=$1
+			base_dir=$2
+			force=$3
+			return_status=$4
 
-		if [ $# -gt 2 ]; then
+			if [[ "$return_status" -eq 1 ]]; then
+				force=true
+			fi
+
+		elif [ $# -gt 2 ]; then
 			module_name=$1
 			base_dir=$2
 			force=$3
@@ -1893,7 +1941,12 @@ install_module()
 		elif [ $# -gt 0 ]; then
 			module_name=$1 
 		else
-			lecho_err "Minimum of 1 parameter is required!"
+
+			if [[ "$return_status" -eq 1 ]]; then
+				error=1
+			else
+				lecho_err "Minimum of 1 parameter is required!"
+			fi
 		fi
 
 
@@ -1903,8 +1956,12 @@ install_module()
 
 
 		if [ -z "$url" ]; then
-		
-			lecho_err "Module not found/cannot be installed!" && exit
+
+			if [[ "$return_status" -eq 1 ]]; then
+				error=1
+			else
+				lecho_err "Module not found/cannot be installed!" && exit
+			fi
 		
 		elif [ -f "$module_conf" ]; then
 
@@ -1924,55 +1981,67 @@ install_module()
 			fi
 		fi
 
-		# ALL OK -> Do Ops
-		
-		local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
-		local module="$tmp_dir/$module_name.zip"	
-		local dest="$tmp_dir/$module_name"
 
-		sudo wget -O "$module" "$url"
-		sudo unzip $module -d "$tmp_dir/$module_name"
+		# ALL OK -> Do Ops	
+		if [[ "$error" -eq 0 ]]; then			
 
-		for j in $(find $dest -type f -print)
-		do				
-			local name=$(basename -- "$j")
-			local filename="${name%.*}"
+			local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
+			local module="$tmp_dir/$module_name.zip"	
+			local dest="$tmp_dir/$module_name"
 
-			if [[ $name == *$current_python.so ]]; then					
-				# Move tmp file to main location
-				lecho "Moving runtime file $j to $deploy_path/$filename.so"
-				sudo mv $j $deploy_path/$filename.so
+			sudo wget -O "$module" "$url"
+			sudo unzip $module -d "$tmp_dir/$module_name"
 
-				# so and py versions of same module are mutually exclusive
-				if [ -f "$deploy_path/$filename.py" ]; then
-					sudo rm "$deploy_path/$filename.py"
+			for j in $(find $dest -type f -print)
+			do				
+				local name=$(basename -- "$j")
+				local filename="${name%.*}"
+
+				if [[ $name == *$current_python.so ]]; then					
+					# Move tmp file to main location
+					lecho "Moving runtime file $j to $deploy_path/$filename.so"
+					sudo mv $j $deploy_path/$filename.so
+
+					# so and py versions of same module are mutually exclusive
+					if [ -f "$deploy_path/$filename.py" ]; then
+						sudo rm "$deploy_path/$filename.py"
+					fi
+
+				elif [[ $name == *.json ]]; then					
+					# Move tmp file to main location
+					lecho "Moving conf file $j to $deploy_path/conf/$filename.json"
+					sudo mv $j $deploy_path/conf/$filename.json
+				elif [[ $name == *.py ]]; then					
+					# Move tmp file to main location
+					lecho "Moving runtime file $j to $deploy_path/$filename.py"
+					sudo mv $j $deploy_path/$filename.py
+
+					# so and py versions of same module are mutually exclusive
+					if [ -f "$deploy_path/$filename.so" ]; then
+						sudo rm "$deploy_path/$filename.so"
+					fi			
 				fi
 
-			elif [[ $name == *.json ]]; then					
-				# Move tmp file to main location
-				lecho "Moving conf file $j to $deploy_path/conf/$filename.json"
-				sudo mv $j $deploy_path/conf/$filename.json
-			elif [[ $name == *.py ]]; then					
-				# Move tmp file to main location
-				lecho "Moving runtime file $j to $deploy_path/$filename.py"
-				sudo mv $j $deploy_path/$filename.py
+			done
 
-				# so and py versions of same module are mutually exclusive
-				if [ -f "$deploy_path/$filename.so" ]; then
-					sudo rm "$deploy_path/$filename.so"
-				fi			
+			if [[ "$return_status" -eq 1 ]]; then
+				error=0
+			else
+				lecho "Processing completed. You may want to restart $PROGRAM_NAME service"
 			fi
-
-		done
-
-		lecho "Processing completed. You may want to restart $PROGRAM_NAME service"
+		fi			
 	
 	else
-		lecho_err "Program core was not found. Please install the program before attempting to install modules."
+
+		if [[ "$return_status" -eq 1 ]]; then
+			error=1
+		else
+			lecho_err "Program core was not found. Please install the program before attempting to install modules."
+		fi		
 	fi
 
+	echo $error
 }
-
 
 
 
@@ -2029,6 +2098,232 @@ remove_module()
 	fi
 }
 
+
+
+#############################################
+# Installs a grahil profile meant for current 
+# platform/python version from the archives to
+# the currently active grahil installation
+# 
+# NOTE: Requires build manifest, system detection
+# as well as python detection.
+#
+# GLOBALS:
+#		DEFAULT_PROGRAM_PATH, PROGRAM_NAME
+#
+# ARGUMENTS:
+#			$1 = profile name - String
+#			$2 = base directory path of grahil installation. defaults to DEFAULT_PROGRAM_PATH - String path
+#			$3 = Whether to force install (overwriting without prompt). - Boolean
+#
+#
+# RETURN:
+#		
+#############################################
+install_profile()
+{
+	local profile_name=
+	local base_dir=$DEFAULT_PROGRAM_PATH	
+	local force=false
+
+	#check_current_installation 1
+	program_exists=0
+	profile_name=$1
+
+	if [ "$program_exists" -eq 1 ]; then
+
+		if [ $# -gt 2 ]; then
+			profile_name=$1
+			base_dir=$2
+			force=$3
+		elif [ $# -gt 1 ]; then
+			profile_name=$1
+			base_dir=$2
+		elif [ $# -gt 0 ]; then
+			profile_name=$1 
+		else
+			lecho_err "Minimum of 1 parameter is required!"
+		fi		
+	fi
+
+	
+	local url=$(get_profile_url $profile_name)
+
+	if [ -z "$url" ]; then		
+		lecho_err "Profile not found/cannot be installed!" && exit
+	else
+
+		# ALL OK -> Do Ops
+		
+		local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
+		local profile_archive="$tmp_dir/$profile_name.zip"	
+		local profile_package_path="$tmp_dir/$profile_name"
+
+		local module_conf_source_path="$profile_package_path/modules/conf"
+		local scripts_source_path="$profile_package_path/scripts"
+		local rules_source_path="$profile_package_path/rules"
+		
+		local module_install_path="$base_dir/oneadmin/modules"
+		local module_conf_install_path="$base_dir/oneadmin/modules/conf"
+		local scripts_install_path="$base_dir/scripts"
+		local rules_install_path="$base_dir/rules"
+
+		# extract profile archive to a tmp location
+
+		sudo wget -O "$profile_archive" "$url"
+		sudo unzip $profile_archive -d $profile_package_path
+		
+
+		# read meta file
+		local meta_file="$profile_package_path/meta.json"
+		local result=$(<$meta_file)
+
+		local profile_name=$(jq -r '.name' <<< ${result})		
+		local add_modules=($(jq -r '.modules.add' <<< ${result}  | tr -d '[]," '))		
+		local remove_modules=($(jq -r '.modules.remove' <<< ${result}  | tr -d '[]," '))
+		local add_rules=($(jq -r '.rules.add' <<< ${result}  | tr -d '[]," '))
+		local remove_rules=($(jq -r '.rules.remove' <<< ${result}  | tr -d '[]," '))
+		local add_scripts=($(jq -r '.scripts.add' <<< ${result}  | tr -d '[]," '))
+		local remove_scripts=($(jq -r '.scripts.remove' <<< ${result}  | tr -d '[]," '))
+
+
+		# install required modules
+
+		for module in "${add_modules[@]}"
+		do
+			install_error=$(install_module $module $DEFAULT_PROGRAM_PATH true 1)
+			
+			if [ $install_error -eq 1 ];then
+				lecho_err "Failed to install module $module." 
+				lecho_err "Profile coudl not be installed properly or is corrupted"
+				exit
+			fi
+
+			local module_conf_source_file="$module_conf_source_path/$module.json"
+			local module_conf_target_file="$module_conf_install_path/$module.json"			
+
+			# copy over any specific configuration
+			if [ -f "$module_conf_source_file" ]; then
+				lecho "Copying over custom module configuration $module_conf_source_file to $module_conf_target_file"
+				sudo mv $module_conf_source_file $module_conf_target_file				
+			fi
+
+			# enable required modules
+			tmpfile=$(echo "${module_conf_target_file/.json/.tmp}")
+			sudo echo "$( jq '.enabled = "true"' $module_conf_target_file )" > $tmpfile
+			sudo mv $tmpfile $module_conf_target_file
+
+		done
+		
+
+		# remove unwanted modules
+
+		for module in "${remove_modules[@]}"
+		do
+			local module_so_file="$module_install_path/$module.so"
+			local module_py_file="$module_install_path/$module.py"
+			local module_conf_file="$module_conf_install_path/$module.json"
+
+			# delete module file
+			if [ -f "$module_so_file" ]; then
+				lecho "Deleting module file $module_so_file"
+				sudo rm $module_so_file
+			elif [ -f "$module_py_file" ]; then
+				lecho "Deleting module file $module_py_file"
+				sudo rm $module_py_file
+			fi
+
+			# delete module conf file
+			if [ -f "$module_conf_file" ]; then
+				lecho "Deleting module config file $module_conf_file"
+				sudo rm $module_conf_file
+			fi
+
+		done
+
+		
+		# install required rules
+
+		for rule in "${add_rules[@]}"
+		do
+
+			local installable_rule="$rules_source_path/$rule.json" 
+			local target_rule="$rules_install_path/$rule.json"
+
+			if [ -f "$installable_rule" ]; then
+				if [ ! -f "$target_rule" ]; then
+					lecho "Moving rule $installable_rule to $target_rule"
+					sudo mv $installable_rule $target_rule
+				else
+					lecho "Target rule already exists. Skipping rule installation for $installable_rule"					
+				fi
+			else
+				lecho "Something is wrong! Installable rule $installable_rule does not exist in the profile package."					
+			fi
+
+		done
+
+
+		# remove unwanted rules
+
+		for rule in "${remove_rules[@]}"
+		do
+
+			local removable_rule="$rules_install_path/$rule.json"
+
+			if [ -f "$removable_rule" ]; then
+				sudo rm $removable_rule
+			else
+				lecho "Rule $removable_rule does not exist at target location. Nothing to remove here!."					
+			fi
+
+		done
+
+
+		# install required scripts
+
+		for script in "${add_scripts[@]}"
+		do
+				
+			local installable_script="$scripts_install_path/$script.json" 
+			local target_script="$scripts_source_path/$script.json"
+
+			if [ -f "$installable_script" ]; then
+				if [ ! -f "$target_script" ]; then
+					lecho "Moving script $installable_script to $target_script"
+					sudo mv $installable_script $target_script
+				else
+					lecho "Target script already exists. Skipping rule installation for $installable_script"					
+				fi
+			else
+				lecho "Something is wrong! Installable script $installable_script does not exist in the profile package."					
+			fi
+
+		done
+
+
+		# remove unwanted scripts
+
+		for script in "${remove_scripts[@]}"
+		do
+
+			local removable_script="$scripts_install_path/$script.json"
+
+			if [ -f "$removable_script" ]; then
+				sudo rm $removable_script
+			else
+				lecho "Script $removable_script does not exist at target location. Nothing to remove here!."					
+			fi
+
+		done
+
+
+		# once eveything is done mark current profile selection => store active profile somewhere
+
+		# restart service
+	fi
+	
+}
 
 
 
@@ -3490,14 +3785,23 @@ main()
 		get_install_info
 
 		if [[ $args_update_mode -eq 0 ]]; then
-
-			if [[ $args_module_request -eq 1 ]]; then
+		
+			if [[ $args_profile_request -eq 1 ]]; then
 
 				if is_first_time_install; then
 					prerequisites_python
 				fi
 
-				echo "Installing module" && sleep 2
+				echo "Installing profile $args_profile_name" && sleep 2
+				install_profile $args_profile_name				
+
+			elif [[ $args_module_request -eq 1 ]]; then
+
+				if is_first_time_install; then
+					prerequisites_python
+				fi
+
+				echo "Installing module $args_module_name" && sleep 2
 				install_module $args_module_name
 
 			else				
@@ -4062,11 +4366,15 @@ usage()
 
 
 # grab any shell arguments
-while getopts 'm:u:ird:h' o; do
+while getopts 'm:u:irdp:h' o; do
     case "${o}" in
 		m) 
 			args_module_request=1
 			args_module_name="${OPTARG}"		
+		;;
+		p) 
+			args_profile_request=1
+			args_profile_name="${OPTARG}"		
 		;;
 		u) 
 			args_update_request=1
@@ -4097,4 +4405,4 @@ if ! validatePermissions; then
 fi
 
 # start
-main
+#main
