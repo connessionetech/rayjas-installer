@@ -29,6 +29,7 @@ args_profile_request=
 args_profile_name=
 
 
+CURRENT_INSTALLATION_PROFILE=
 
 CONFIGURATION_FILE=conf.ini
 
@@ -2317,9 +2318,17 @@ install_profile()
 			done
 
 
-			# once eveything is done mark current profile selection => store active profile somewhere
+			# once eveything is done mark current profile selection 
+			# => store active profile somewhere
+			if [ ! -f "$PROGRAM_INSTALLATION_REPORT_FILE" ]; then
+				echo "No installation report found."
+			else
+				update_installation_meta $profile_name
+			fi
+
 
 			# restart service
+			restart_grahil_service
 
 		else
 
@@ -2879,6 +2888,27 @@ start_grahil_service()
 
 
 
+
+#############################################
+# Restarts grahil service using systemctl
+#
+# ARGUMENTS:
+#
+# RETURN:
+#	
+#############################################
+restart_grahil_service()
+{
+	if is_service_installed; then
+		stop_grahil_service && sleep 2 && start_grahil_service
+	else
+		lecho_err "Service not found!"
+	fi
+}
+
+
+
+
 #############################################
 # Stops grahil service using systemctl
 # 
@@ -3350,13 +3380,50 @@ write_installation_meta()
 {
 	local now=$(date)
 	local installtime=$now
+	local profile=$CURRENT_INSTALLATION_PROFILE
 	local pythonversion=${PYTHON_VERSION/python/$replacement}
 	local replacement=""
 	local subject="python"
 	local interpreterpath="$PYTHON_VIRTUAL_ENV_LOCATION/$PROGRAM_FOLDER_NAME/bin/python$PYTHON_VERSION"
 	local requirements_filename=$(basename -- "$REQUIREMENTS_FILE")
 	
-	jq -n --arg interpreterpath "$interpreterpath" --arg pythonversion "$pythonversion" --arg installtime "$installtime" --arg requirements_filename "$requirements_filename" '{install_time: $installtime, python_version: $pythonversion, interpreter: $interpreterpath, requirements: $requirements_filename}' | sudo tee "$PROGRAM_INSTALLATION_REPORT_FILE" > /dev/null
+	jq -n --arg profile "$profile" --arg interpreterpath "$interpreterpath" --arg pythonversion "$pythonversion" --arg installtime "$installtime" --arg requirements_filename "$requirements_filename" '{install_time: $installtime, python_version: $pythonversion, interpreter: $interpreterpath, requirements: $requirements_filename}' | sudo tee "$PROGRAM_INSTALLATION_REPORT_FILE" > /dev/null
+}
+
+
+
+
+
+#############################################
+# Updates current instalaltion profile in the instalaltion report
+# 
+# GLOBALS:
+#	PROGRAM_INSTALLATION_REPORT_FILE
+#
+# ARGUMENTS:
+#	$1: Profile name
+#
+# RETURN:
+#	
+#############################################
+update_installation_meta()
+{
+	if [ ! -f "$PROGRAM_INSTALLATION_REPORT_FILE" ]; then
+		lecho_err "No installation report found."
+	else
+
+		if [ $# -gt 0 ]; then
+			profile_name=$1	
+			CURRENT_INSTALLATION_PROFILE=$profile_name
+			local result=$(<$PROGRAM_INSTALLATION_REPORT_FILE)
+			local tmpfile=$(echo "${PROGRAM_INSTALLATION_REPORT_FILE/.json/.tmp}")
+			sudo echo "$( jq '.profile = "$CURRENT_INSTALLATION_PROFILE"' $PROGRAM_INSTALLATION_REPORT_FILE )" > $tmpfile
+			sudo mv $tmpfile $PROGRAM_INSTALLATION_REPORT_FILE
+		else
+			lecho_err "Minimum of 1 parameter is required!"
+		fi	
+
+	fi
 }
 
 
@@ -3384,10 +3451,12 @@ read_installation_meta()
 		local pythonversion=$(jq -r '.python_version' <<< ${result})
 		local interpreterpath=$(jq -r '.interpreter' <<< ${result})
 		local requirements_filename=$(jq -r '.requirements' <<< ${result})
+		local profile=$(jq -r '.profile' <<< ${result})
 
 		INSTALLATION_PYTHON_VERSION="$pythonversion"
 		PYTHON_VIRTUAL_ENV_INTERPRETER=$interpreterpath
 		PYTHON_REQUIREMENTS_FILENAME=$requirements_filename
+		CURRENT_INSTALLATION_PROFILE=profile
 	fi
 }
 
