@@ -4504,4 +4504,4 @@ if ! validatePermissions; then
 fi
 
 # start
-#main
+main
