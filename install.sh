@@ -1587,6 +1587,7 @@ install_from_url()
 			lecho "Moving files to program location $DEFAULT_PROGRAM_PATH"
 			sudo cp -R "$TMP_DIR"/. "$DEFAULT_PROGRAM_PATH/"	
 			sudo chown -R $USER: "$DEFAULT_PROGRAM_PATH"
+			sudo chmod a+rwx "$DEFAULT_PROGRAM_PATH"
 			if [ -f "$DEFAULT_PROGRAM_PATH/$PYTHON_MAIN_FILE" ]; then	
 				# Copying successful 
 				lecho "files copied to program path"
@@ -1628,7 +1629,7 @@ install_from_url()
 #############################################
 unpack_runtime_libraries()
 {
-	local current_python="38"
+	local current_python="${PYTHON_VERSION//./}"
 	local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
 	local runtime_base_dir="$DEFAULT_PROGRAM_PATH/runtime/$PLATFORM_ARCH"
 	local deploy_base_dir=$DEFAULT_PROGRAM_PATH
@@ -2835,7 +2836,7 @@ auto_install_program()
 	if [ ! -d "$DEFAULT_PROGRAM_PATH" ]; then
 		sudo mkdir -p -m "$DEFAULT_PROGRAM_PATH"
 		sudo chown -R $USER: "$DEFAULT_PROGRAM_PATH"
-		chmod a+rwx "$DEFAULT_PROGRAM_PATH"
+		sudo chmod a+rwx "$DEFAULT_PROGRAM_PATH"
 	fi
 
 
