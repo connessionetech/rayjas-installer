@@ -2835,6 +2835,7 @@ auto_install_program()
 	if [ ! -d "$DEFAULT_PROGRAM_PATH" ]; then
 		sudo mkdir -p -m "$DEFAULT_PROGRAM_PATH"
 		sudo chown -R $USER: "$DEFAULT_PROGRAM_PATH"
+		chmod a+rwx "$DEFAULT_PROGRAM_PATH"
 	fi
 
 
