@@ -1408,7 +1408,7 @@ check_create_virtual_environment()
 
 	if [ ! -d "$PYTHON_VIRTUAL_ENV_LOCATION" ]; then	
 		mkdir -p "$PYTHON_VIRTUAL_ENV_LOCATION"
-		sudo chown -R $USER: "$PYTHON_VIRTUAL_ENV_LOCATION"
+		sudo chown -R $USER: $PYTHON_VIRTUAL_ENV_LOCATION
 	fi	
 
 	python=$(which python$PYTHON_VERSION)
@@ -1422,9 +1422,7 @@ check_create_virtual_environment()
 
 		echo "Creating virtual environment @ $VENV_FOLDER"
 		$python -m venv $VENV_FOLDER
-
-		sudo chown -R $USER: "$PYTHON_VIRTUAL_ENV_LOCATION" 
-		sudo chown -R $USER: "$VENV_FOLDER"
+		sudo chown -R $USER: $VENV_FOLDER
 
 		if [ -f "$VENV_FOLDER/bin/activate" ]; then
 			lecho "Virtual environment created successfully"
@@ -1438,8 +1436,6 @@ check_create_virtual_environment()
 		echo "Virtual environment folder already exists.. let me check it.." && sleep 1
 		if [ ! -f "$VENV_FOLDER/bin/activate" ] || [ ! -f "$VENV_FOLDER/bin/pip" ] || [ ! -f "$VENV_FOLDER/bin/python3" ]; then
 			lecho "Virtual environment seems broken. Trying to re-create"
-			sudo chown -R $USER: "$PYTHON_VIRTUAL_ENV_LOCATION" 
-			sudo chown -R $USER: "$VENV_FOLDER"
 			rm -rf "$VENV_FOLDER" && sleep 1
 			check_create_virtual_environment # Create virtual environment again
 		else
