@@ -1414,14 +1414,15 @@ check_create_virtual_environment()
 	python=$(which python$PYTHON_VERSION)
 	pipver=$(which pip3)
 
-	$python -m pip install --upgrade pip	
-	$pipver install --upgrade setuptools wheel
+	$python -m pip install --upgrade pip
+	$pipver install --upgrade setuptools wheel	
 	
 
 	if [ ! -d "$VENV_FOLDER" ]; then
 
 		echo "Creating virtual environment @ $VENV_FOLDER"
-		"$python" -m venv "$VENV_FOLDER"
+		$python -m venv $VENV_FOLDER
+		sudo chown -R $USER: "$VENV_FOLDER"
 
 		if [ -f "$VENV_FOLDER/bin/activate" ]; then
 			lecho "Virtual environment created successfully"
@@ -2836,7 +2837,6 @@ auto_install_program()
 	if [ ! -d "$DEFAULT_PROGRAM_PATH" ]; then
 		sudo mkdir -p -m "$DEFAULT_PROGRAM_PATH"
 		sudo chown -R $USER: "$DEFAULT_PROGRAM_PATH"
-		sudo chmod a+rwx "$DEFAULT_PROGRAM_PATH"
 	fi
 
 
