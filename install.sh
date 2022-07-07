@@ -2194,7 +2194,7 @@ install_profile()
 		do
 			local install_error=$(install_module $module $DEFAULT_PROGRAM_PATH true 1)
 			
-			if [[ "$install_error" -eq 1 ]]; then
+			if [ "$install_error" -eq 1 ]; then
 				lecho_err "Failed to install module $module." 
 				module_install_error=1 && break
 			fi
@@ -2216,7 +2216,7 @@ install_profile()
 		done
 
 
-		if [[ "$module_install_error" -eq 1 ]]; then
+		if [ "$module_install_error" -eq 1 ]; then
 
 			# remove unwanted modules
 
