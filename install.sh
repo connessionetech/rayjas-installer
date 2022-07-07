@@ -1920,7 +1920,7 @@ install_module()
 	local return_status=0
 	local error=1
 
-	check_current_installation 1
+	check_current_installation 1 1
 
 	if [ "$program_exists" -eq 1 ]; then
 
@@ -2194,7 +2194,7 @@ install_profile()
 		do
 			local install_error=$(install_module $module $DEFAULT_PROGRAM_PATH true 1)
 			
-			if [ "$install_error" -eq 1 ]; then
+			if [ "$install_error" -eq 1 ]; then			
 				lecho_err "Failed to install module $module." 
 				module_install_error=1 && break
 			fi
