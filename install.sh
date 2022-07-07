@@ -4505,5 +4505,9 @@ if ! validatePermissions; then
 	request_permission;
 fi
 
-# start
+
+#############################################
+# THIS PROGRAM SHOULD NOT BE RUN WITH `sudo` command#	
+#############################################
+# Main entry point
 main
