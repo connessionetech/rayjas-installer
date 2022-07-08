@@ -1996,7 +1996,8 @@ install_module()
 				local name=$(basename -- "$j")
 				local filename="${name%.*}"
 
-				if [[ $name == *$current_python.so ]]; then					
+				#if [[ $name == *$current_python.so ]]; then	
+				if [[ "$name" == *"$current_python.so" ]]; then				
 					# Move tmp file to main location
 					lecho "Moving runtime file $j to $deploy_path/$filename.so"
 					sudo mv $j $deploy_path/$filename.so
