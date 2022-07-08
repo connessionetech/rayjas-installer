@@ -1989,14 +1989,13 @@ install_module()
 			local dest="$tmp_dir/$module_name"
 
 			sudo wget -O "$module" "$url"
-			sudo unzip $module -d "$tmp_dir/$module_name"
+			sudo unzip $module -d "$dest"
 
-			for j in $(find $dest -type f -print)
-			do				
+			for j in $dest; do
+
 				local name=$(basename -- "$j")
 				local filename="${name%.*}"
 
-				#if [[ $name == *$current_python.so ]]; then	
 				if [[ "$name" == *"$current_python.so" ]]; then				
 					# Move tmp file to main location
 					lecho "Moving runtime file $j to $deploy_path/$filename.so"
@@ -2007,11 +2006,11 @@ install_module()
 						sudo rm "$deploy_path/$filename.py"
 					fi
 
-				elif [[ $name == *.json ]]; then					
+				elif [[ $name == *".json" ]]; then					
 					# Move tmp file to main location
 					lecho "Moving conf file $j to $deploy_path/conf/$filename.json"
 					sudo mv $j $deploy_path/conf/$filename.json
-				elif [[ $name == *.py ]]; then					
+				elif [[ $name == *".py" ]]; then					
 					# Move tmp file to main location
 					lecho "Moving runtime file $j to $deploy_path/$filename.py"
 					sudo mv $j $deploy_path/$filename.py
