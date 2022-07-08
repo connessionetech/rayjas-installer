@@ -2134,240 +2134,265 @@ install_profile()
 	local profile_name=
 	local base_dir=$DEFAULT_PROGRAM_PATH	
 	local force=false
+	local error=0
+	local err_message=
 
-	#check_current_installation 1
-	program_exists=0
-	profile_name=$1
+	check_current_installation 1 1
 
 	if [ "$program_exists" -eq 1 ]; then
 
-		if [ $# -gt 2 ]; then
-			profile_name=$1
-			base_dir=$2
-			force=$3
-		elif [ $# -gt 1 ]; then
-			profile_name=$1
-			base_dir=$2
-		elif [ $# -gt 0 ]; then
-			profile_name=$1 
+		if [ $# -lt 0 ]; then
+			error=1
+			err_message="Minimum of 1 parameter is required!"
 		else
-			lecho_err "Minimum of 1 parameter is required!"
-		fi		
-	fi
+			if [ $# -gt 2 ]; then
+				profile_name=$1
+				base_dir=$2
+				force=$3
+			elif [ $# -gt 1 ]; then
+				profile_name=$1
+				base_dir=$2
+			elif [ $# -gt 0 ]; then
+				profile_name=$1 
+			fi
 
-	
-	local url=$(get_profile_url $profile_name)
+			local url=$(get_profile_url $profile_name)
+			
+			if [ -z "$url" ]; then
+				error=1
+				err_message="Profile not found/cannot be installed!"
+			fi
 
-	if [ -z "$url" ]; then		
-		lecho_err "Profile not found/cannot be installed!" && exit
+			# ALL OK -> Do Ops		
+			local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
+			local profile_archive="$tmp_dir/$profile_name.zip"	
+			local profile_package_path="$tmp_dir/$profile_name"
+
+			local module_conf_source_path="$profile_package_path/modules/conf"
+			local scripts_source_path="$profile_package_path/scripts"
+			local rules_source_path="$profile_package_path/rules"
+			
+			local module_install_path="$base_dir/oneadmin/modules"
+			local module_conf_install_path="$base_dir/oneadmin/modules/conf"
+			local scripts_install_path="$base_dir/scripts"
+			local rules_install_path="$base_dir/rules"
+
+			# extract profile archive to a tmp location
+
+			sudo wget -O "$profile_archive" "$url"
+			sudo unzip $profile_archive -d $profile_package_path	
+
+			# read meta file
+			local meta_file="$profile_package_path/meta.json"
+			local result=$(<$meta_file)
+
+			local profile_name=$(jq -r '.name' <<< ${result})		
+			local add_modules=($(jq -r '.modules.add' <<< ${result}  | tr -d '[]," '))		
+			local remove_modules=($(jq -r '.modules.remove' <<< ${result}  | tr -d '[]," '))
+			local add_rules=($(jq -r '.rules.add' <<< ${result}  | tr -d '[]," '))
+			local remove_rules=($(jq -r '.rules.remove' <<< ${result}  | tr -d '[]," '))
+			local add_scripts=($(jq -r '.scripts.add' <<< ${result}  | tr -d '[]," '))
+			local remove_scripts=($(jq -r '.scripts.remove' <<< ${result}  | tr -d '[]," '))
+
+			# install required modules
+			local module_install_error=0
+
+			for module in "${add_modules[@]}"; do
+			
+				local install_error=$(install_module $module $DEFAULT_PROGRAM_PATH true 1)
+				
+				if [ "$install_error" -eq 1 ]; then					
+					err_message="Failed to install module $module."
+					module_install_error=1 && error=1
+					break
+				fi
+
+				local module_conf_source_file="$module_conf_source_path/$module.json"
+				local module_conf_target_file="$module_conf_install_path/$module.json"			
+
+				# copy over any specific configuration
+				if [ -f "$module_conf_source_file" ]; then
+					lecho "Copying over custom module configuration $module_conf_source_file to $module_conf_target_file"
+					sudo mv $module_conf_source_file $module_conf_target_file				
+				fi
+
+				# enable required modules
+				local tmpfile=$(echo "${module_conf_target_file/.json/.tmp}")
+				sudo echo "$( jq '.enabled = "true"' $module_conf_target_file )" > $tmpfile
+				sudo mv $tmpfile $module_conf_target_file
+
+			done
+
+			# If no module installer error -> continue profile setup
+
+			if [[ "$module_install_error" -eq 0 ]]; then
+
+				# remove unwanted modules
+				for module in "${remove_modules[@]}"
+				do
+					local module_so_file="$module_install_path/$module.so"
+					local module_py_file="$module_install_path/$module.py"
+					local module_conf_file="$module_conf_install_path/$module.json"
+
+					# delete module file
+					if [ -f "$module_so_file" ]; then
+						lecho "Deleting module file $module_so_file"
+						sudo rm $module_so_file
+					elif [ -f "$module_py_file" ]; then
+						lecho "Deleting module file $module_py_file"
+						sudo rm $module_py_file
+					fi
+
+					# delete module conf file
+					if [ -f "$module_conf_file" ]; then
+						lecho "Deleting module config file $module_conf_file"
+						sudo rm $module_conf_file
+					fi
+
+				done
+
+
+				# install required rules
+
+				for rule in "${add_rules[@]}"
+				do
+
+					local installable_rule="$rules_source_path/$rule.json" 
+					local target_rule="$rules_install_path/$rule.json"
+
+					if [ -f "$installable_rule" ]; then
+						if [ ! -f "$target_rule" ]; then
+							lecho "Moving rule $installable_rule to $target_rule"
+							sudo mv $installable_rule $target_rule
+						else
+							lecho "Target rule already exists. Skipping rule installation for $installable_rule"					
+						fi
+					else
+						lecho "Something is wrong! Installable rule $installable_rule does not exist in the profile package."					
+					fi
+
+				done
+
+
+
+				# remove unwanted rules
+
+				for rule in "${remove_rules[@]}"
+				do
+
+					local removable_rule="$rules_install_path/$rule.json"
+
+					if [ -f "$removable_rule" ]; then
+						sudo rm $removable_rule
+					else
+						lecho "Rule $removable_rule does not exist at target location. Nothing to remove here!."					
+					fi
+
+				done
+
+
+				# install required scripts
+
+				for script in "${add_scripts[@]}"
+				do
+						
+					local installable_script="$scripts_install_path/$script.json" 
+					local target_script="$scripts_source_path/$script.json"
+
+					if [ -f "$installable_script" ]; then
+						if [ ! -f "$target_script" ]; then
+							lecho "Moving script $installable_script to $target_script"
+							sudo mv $installable_script $target_script
+						else
+							lecho "Target script already exists. Skipping rule installation for $installable_script"					
+						fi
+					else
+						lecho "Something is wrong! Installable script $installable_script does not exist in the profile package."					
+					fi
+
+				done
+
+
+				# remove unwanted scripts
+
+				for script in "${remove_scripts[@]}"
+				do
+
+					local removable_script="$scripts_install_path/$script.json"
+
+					if [ -f "$removable_script" ]; then
+						sudo rm $removable_script
+					else
+						lecho "Script $removable_script does not exist at target location. Nothing to remove here!."					
+					fi
+
+				done
+
+
+				# once eveything is done mark current profile selection 
+				# => store active profile somewhere
+				if [ ! -f "$PROGRAM_INSTALLATION_REPORT_FILE" ]; then
+					echo "No installation report found."
+				else
+					update_installation_meta $profile_name
+				fi
+
+
+				# restart service
+				restart_grahil_service
+
+
+				if [[ "$return_status" -eq 1 ]]; then
+					error=0 && echo $error
+				else
+					lecho "Processing completed. You may want to restart $PROGRAM_NAME service"
+				fi
+
+			else
+
+				# If there is module instalaltion error during profile installation,
+				# we remove all profile related modules
+				
+				for module in "${add_modules[@]}"; do
+
+					local module_so_file="$module_install_path/$module.so"
+					local module_py_file="$module_install_path/$module.py"
+					local module_conf_file="$module_conf_install_path/$module.json"
+
+					# delete module file
+					if [ -f "$module_so_file" ]; then
+						lecho "Deleting module file $module_so_file"
+						sudo rm $module_so_file
+					elif [ -f "$module_py_file" ]; then
+						lecho "Deleting module file $module_py_file"
+						sudo rm $module_py_file
+					fi
+
+					# delete module conf file
+					if [ -f "$module_conf_file" ]; then
+						lecho "Deleting module config file $module_conf_file"
+						sudo rm $module_conf_file
+					fi
+
+				done
+
+
+				if [[ "$return_status" -eq 1 ]]; then
+					error=1 && echo $error
+				else
+					lecho_err "Error in module installation to install module $err_message."
+				fi				
+				
+			fi
+
+		fi	
 	else
 
-		# ALL OK -> Do Ops		
-		local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
-		local profile_archive="$tmp_dir/$profile_name.zip"	
-		local profile_package_path="$tmp_dir/$profile_name"
-
-		local module_conf_source_path="$profile_package_path/modules/conf"
-		local scripts_source_path="$profile_package_path/scripts"
-		local rules_source_path="$profile_package_path/rules"
-		
-		local module_install_path="$base_dir/oneadmin/modules"
-		local module_conf_install_path="$base_dir/oneadmin/modules/conf"
-		local scripts_install_path="$base_dir/scripts"
-		local rules_install_path="$base_dir/rules"
-
-		# extract profile archive to a tmp location
-
-		sudo wget -O "$profile_archive" "$url"
-		sudo unzip $profile_archive -d $profile_package_path	
-
-		# read meta file
-		local meta_file="$profile_package_path/meta.json"
-		local result=$(<$meta_file)
-
-		local profile_name=$(jq -r '.name' <<< ${result})		
-		local add_modules=($(jq -r '.modules.add' <<< ${result}  | tr -d '[]," '))		
-		local remove_modules=($(jq -r '.modules.remove' <<< ${result}  | tr -d '[]," '))
-		local add_rules=($(jq -r '.rules.add' <<< ${result}  | tr -d '[]," '))
-		local remove_rules=($(jq -r '.rules.remove' <<< ${result}  | tr -d '[]," '))
-		local add_scripts=($(jq -r '.scripts.add' <<< ${result}  | tr -d '[]," '))
-		local remove_scripts=($(jq -r '.scripts.remove' <<< ${result}  | tr -d '[]," '))
-
-		# install required modules
-		local module_install_error=0
-
-		for module in "${add_modules[@]}"
-		do
-			local install_error=$(install_module $module $DEFAULT_PROGRAM_PATH true 1)
-			
-			if [ "$install_error" -eq 1 ]; then			
-				lecho_err "Failed to install module $module." 
-				module_install_error=1 && break
-			fi
-
-			local module_conf_source_file="$module_conf_source_path/$module.json"
-			local module_conf_target_file="$module_conf_install_path/$module.json"			
-
-			# copy over any specific configuration
-			if [ -f "$module_conf_source_file" ]; then
-				lecho "Copying over custom module configuration $module_conf_source_file to $module_conf_target_file"
-				sudo mv $module_conf_source_file $module_conf_target_file				
-			fi
-
-			# enable required modules
-			local tmpfile=$(echo "${module_conf_target_file/.json/.tmp}")
-			sudo echo "$( jq '.enabled = "true"' $module_conf_target_file )" > $tmpfile
-			sudo mv $tmpfile $module_conf_target_file
-
-		done
-
-
-		if [ "$module_install_error" -eq 1 ]; then
-
-			# remove unwanted modules
-
-			for module in "${remove_modules[@]}"
-			do
-				local module_so_file="$module_install_path/$module.so"
-				local module_py_file="$module_install_path/$module.py"
-				local module_conf_file="$module_conf_install_path/$module.json"
-
-				# delete module file
-				if [ -f "$module_so_file" ]; then
-					lecho "Deleting module file $module_so_file"
-					sudo rm $module_so_file
-				elif [ -f "$module_py_file" ]; then
-					lecho "Deleting module file $module_py_file"
-					sudo rm $module_py_file
-				fi
-
-				# delete module conf file
-				if [ -f "$module_conf_file" ]; then
-					lecho "Deleting module config file $module_conf_file"
-					sudo rm $module_conf_file
-				fi
-
-			done
-
-			
-			# install required rules
-
-			for rule in "${add_rules[@]}"
-			do
-
-				local installable_rule="$rules_source_path/$rule.json" 
-				local target_rule="$rules_install_path/$rule.json"
-
-				if [ -f "$installable_rule" ]; then
-					if [ ! -f "$target_rule" ]; then
-						lecho "Moving rule $installable_rule to $target_rule"
-						sudo mv $installable_rule $target_rule
-					else
-						lecho "Target rule already exists. Skipping rule installation for $installable_rule"					
-					fi
-				else
-					lecho "Something is wrong! Installable rule $installable_rule does not exist in the profile package."					
-				fi
-
-			done
-
-
-			# remove unwanted rules
-
-			for rule in "${remove_rules[@]}"
-			do
-
-				local removable_rule="$rules_install_path/$rule.json"
-
-				if [ -f "$removable_rule" ]; then
-					sudo rm $removable_rule
-				else
-					lecho "Rule $removable_rule does not exist at target location. Nothing to remove here!."					
-				fi
-
-			done
-
-
-			# install required scripts
-
-			for script in "${add_scripts[@]}"
-			do
-					
-				local installable_script="$scripts_install_path/$script.json" 
-				local target_script="$scripts_source_path/$script.json"
-
-				if [ -f "$installable_script" ]; then
-					if [ ! -f "$target_script" ]; then
-						lecho "Moving script $installable_script to $target_script"
-						sudo mv $installable_script $target_script
-					else
-						lecho "Target script already exists. Skipping rule installation for $installable_script"					
-					fi
-				else
-					lecho "Something is wrong! Installable script $installable_script does not exist in the profile package."					
-				fi
-
-			done
-
-
-			# remove unwanted scripts
-
-			for script in "${remove_scripts[@]}"
-			do
-
-				local removable_script="$scripts_install_path/$script.json"
-
-				if [ -f "$removable_script" ]; then
-					sudo rm $removable_script
-				else
-					lecho "Script $removable_script does not exist at target location. Nothing to remove here!."					
-				fi
-
-			done
-
-
-			# once eveything is done mark current profile selection 
-			# => store active profile somewhere
-			if [ ! -f "$PROGRAM_INSTALLATION_REPORT_FILE" ]; then
-				echo "No installation report found."
-			else
-				update_installation_meta $profile_name
-			fi
-
-
-			# restart service
-			restart_grahil_service
-
+		if [[ "$return_status" -eq 1 ]]; then
+			error=1 && echo $error
 		else
-
-			# If there is module instalaltion error during profile installation,
-			# we remove all profile related modules
-			
-			for module in "${add_modules[@]}"
-			do
-
-				local module_so_file="$module_install_path/$module.so"
-				local module_py_file="$module_install_path/$module.py"
-				local module_conf_file="$module_conf_install_path/$module.json"
-
-				# delete module file
-				if [ -f "$module_so_file" ]; then
-					lecho "Deleting module file $module_so_file"
-					sudo rm $module_so_file
-				elif [ -f "$module_py_file" ]; then
-					lecho "Deleting module file $module_py_file"
-					sudo rm $module_py_file
-				fi
-
-				# delete module conf file
-				if [ -f "$module_conf_file" ]; then
-					lecho "Deleting module config file $module_conf_file"
-					sudo rm $module_conf_file
-				fi
-
-			done			
-		fi
-		
+			lecho_err "Program core was not found. Please install the program before attempting to install profiles."
+		fi		
 	fi
 	
 }
