@@ -1988,6 +1988,7 @@ install_module()
 		# ALL OK -> Do Ops	
 		if [[ "$error" -eq 0 ]]; then			
 
+			local current_python="${PYTHON_VERSION//./}"
 			local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
 			local module="$tmp_dir/$module_name.zip"	
 			local dest="$tmp_dir/$module_name"
