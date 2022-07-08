@@ -1918,7 +1918,7 @@ install_module()
 	local base_dir=$DEFAULT_PROGRAM_PATH	
 	local force=false
 	local return_status=0
-	local error=1
+	local error=0
 
 	check_current_installation 1 1
 
@@ -1946,7 +1946,7 @@ install_module()
 		else
 
 			if [[ "$return_status" -eq 1 ]]; then
-				error=1
+				error=1 && echo $error
 			else
 				lecho_err "Minimum of 1 parameter is required!"
 			fi
@@ -1961,7 +1961,7 @@ install_module()
 		if [ -z "$url" ]; then
 
 			if [[ "$return_status" -eq 1 ]]; then
-				error=1
+				error=1 && echo $error
 			else
 				lecho_err "Module not found/cannot be installed!" && exit
 			fi
@@ -2029,7 +2029,7 @@ install_module()
 			done
 
 			if [[ "$return_status" -eq 1 ]]; then
-				error=0
+				error=0 && echo $error
 			else
 				lecho "Processing completed. You may want to restart $PROGRAM_NAME service"
 			fi
@@ -2038,13 +2038,11 @@ install_module()
 	else
 
 		if [[ "$return_status" -eq 1 ]]; then
-			error=1
+			error=1 && echo $error
 		else
 			lecho_err "Program core was not found. Please install the program before attempting to install modules."
 		fi		
 	fi
-
-	echo $error
 }
 
 
