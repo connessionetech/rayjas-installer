@@ -1919,68 +1919,63 @@ install_module()
 	local force=false
 	local return_status=0
 	local error=0
+	local err_message=
 
 	check_current_installation 1 1
 
 	if [ "$program_exists" -eq 1 ]; then
 
-		if [ $# -gt 3 ]; then
-			module_name=$1
-			base_dir=$2
-			force=$3
-			return_status=$4
-
-			if [[ "$return_status" -eq 1 ]]; then
-				force=true
-			fi
-
-		elif [ $# -gt 2 ]; then
-			module_name=$1
-			base_dir=$2
-			force=$3
-		elif [ $# -gt 1 ]; then
-			module_name=$1
-			base_dir=$2
-		elif [ $# -gt 0 ]; then
-			module_name=$1 
+		if [ $# -lt 0 ]; then
+			error=1
+			err_message="Minimum of 1 parameter is required!"
 		else
-
-			if [[ "$return_status" -eq 1 ]]; then
-				error=1 && echo $error
-			else
-				lecho_err "Minimum of 1 parameter is required!"
+			if [ $# -gt 3 ]; then
+				module_name=$1
+				base_dir=$2
+				force=$3
+				return_status=$4
+				if [[ "$return_status" -eq 1 ]]; then
+					force=true
+				fi
+			elif [ $# -gt 2 ]; then
+				module_name=$1
+				base_dir=$2
+				force=$3
+			elif [ $# -gt 1 ]; then
+				module_name=$1
+				base_dir=$2
+			elif [ $# -gt 0 ]; then
+				module_name=$1 
 			fi
-		fi
 
 
-		local url=$(get_module_url $module_name)
-		local deploy_path="$base_dir/oneadmin/modules"
-		local module_conf="$deploy_path/conf/$module_name.json"
+			local url=$(get_module_url $module_name)
+			local deploy_path="$base_dir/oneadmin/modules"
+			local module_conf="$deploy_path/conf/$module_name.json"
 
 
-		if [ -z "$url" ]; then
+			if [ -z "$url" ]; then
 
-			if [[ "$return_status" -eq 1 ]]; then
-				error=1 && echo $error
-			else
-				lecho_err "Module not found/cannot be installed!" && exit
-			fi
-		
-		elif [ -f "$module_conf" ]; then
+				error=1
+				err_message="Module not found/cannot be installed!"
+			
+			elif [ -f "$module_conf" ]; then
 
-			if [ "$force" = false ] ; then
+				if [ "$force" = false ] ; then
 
-				local response=
-				lecho "Module already exists. Proceeding forward operation will overwrite the existing module."
-				read -r -p "Do you wish to continue? [y/N] " response
-					case $response in
-					[yY][eE][sS]|[yY]) 
-						lecho "Installing module.."
-					;;
-					*)
-						lecho "Module installation cancelled" && exit
-					;;
-					esac
+					local response=
+					lecho "Module already exists. Proceeding forward operation will overwrite the existing module."
+					read -r -p "Do you wish to continue? [y/N] " response
+						case $response in
+						[yY][eE][sS]|[yY]) 
+							lecho "Installing module.."
+						;;
+						*)
+							error=1
+							err_message="Module installation cancelled!"
+						;;
+						esac
+				fi
 			fi
 		fi
 
@@ -2033,6 +2028,15 @@ install_module()
 			else
 				lecho "Processing completed. You may want to restart $PROGRAM_NAME service"
 			fi
+
+		else
+
+			if [[ "$return_status" -eq 1 ]]; then
+				error=1 && echo $error
+			else
+				lecho_err "An error occurred. $err_message"
+			fi		
+
 		fi			
 	
 	else
