@@ -1998,7 +1998,7 @@ install_module()
 
 				if [[ "$name" == *"$current_python.so" ]]; then				
 					# Move tmp file to main location
-					lecho "Moving runtime file $j to $deploy_path/$filename.so"
+					lecho "Moving runtime file $j to $deploy_path/$module_name.so"
 					sudo mv $j $deploy_path/$module_name.so
 					sudo chown $USER: "$deploy_path/$module_name.so"
 
@@ -2009,12 +2009,12 @@ install_module()
 
 				elif [[ $name == *".json" ]]; then					
 					# Move tmp file to main location
-					lecho "Moving conf file $j to $deploy_path/conf/$filename.json"
+					lecho "Moving conf file $j to $deploy_path/conf/$module_name.json"
 					sudo mv $j $deploy_path/conf/$module_name.json
 					sudo chown $USER: "$deploy_path/conf/$module_name.json"
 				elif [[ $name == *".py" ]]; then					
 					# Move tmp file to main location
-					lecho "Moving runtime file $j to $deploy_path/$filename.py"
+					lecho "Moving runtime file $j to $deploy_path/$module_name.py"
 					sudo mv $j $deploy_path/$module_name.py
 					sudo chown $USER: "$deploy_path/$module_name.py"
 
