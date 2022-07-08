@@ -1991,7 +1991,7 @@ install_module()
 			sudo wget -O "$module" "$url"
 			sudo unzip $module -d "$dest"
 
-			for j in $dest; do
+			for j in "$dest"/*; do
 
 				local name=$(basename -- "$j")
 				local filename="${name%.*}"
