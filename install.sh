@@ -1999,25 +1999,28 @@ install_module()
 				if [[ "$name" == *"$current_python.so" ]]; then				
 					# Move tmp file to main location
 					lecho "Moving runtime file $j to $deploy_path/$filename.so"
-					sudo mv $j $deploy_path/$filename.so
+					sudo mv $j $deploy_path/$module_name.so
+					sudo chown $USER: "$deploy_path/$module_name.so"
 
 					# so and py versions of same module are mutually exclusive
 					if [ -f "$deploy_path/$filename.py" ]; then
-						sudo rm "$deploy_path/$filename.py"
+						sudo rm "$deploy_path/$module_name.py"
 					fi
 
 				elif [[ $name == *".json" ]]; then					
 					# Move tmp file to main location
 					lecho "Moving conf file $j to $deploy_path/conf/$filename.json"
-					sudo mv $j $deploy_path/conf/$filename.json
+					sudo mv $j $deploy_path/conf/$module_name.json
+					sudo chown $USER: "$deploy_path/conf/$module_name.json"
 				elif [[ $name == *".py" ]]; then					
 					# Move tmp file to main location
 					lecho "Moving runtime file $j to $deploy_path/$filename.py"
-					sudo mv $j $deploy_path/$filename.py
+					sudo mv $j $deploy_path/$module_name.py
+					sudo chown $USER: "$deploy_path/$module_name.py"
 
 					# so and py versions of same module are mutually exclusive
 					if [ -f "$deploy_path/$filename.so" ]; then
-						sudo rm "$deploy_path/$filename.so"
+						sudo rm "$deploy_path/$module_name.so"
 					fi			
 				fi
 
