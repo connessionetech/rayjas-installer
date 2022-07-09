@@ -1771,9 +1771,8 @@ get_module_url()
 {
 	local module_name="$1.zip"
 	local url=$PROGRAM_ARCHIVE_LOCATION
-	url=$(echo "$url" | sed "s/core/modules/")
-	url=$(echo "$url" | sed "s/grahil.zip/$module_name/")
-
+	url=${url/core/modules}
+	url=${url/grahil.zip/$module_name}
 	if http_file_exists $url; then
 		echo $url
 	else
