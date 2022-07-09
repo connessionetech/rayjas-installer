@@ -2199,7 +2199,8 @@ install_profile()
 				# install required modules
 				local module_install_error=0
 
-				for module in "${add_modules[@]}"; do
+				for module in "${add_modules[@]}"
+				do
 				
 					local install_error=$(install_module $module $DEFAULT_PROGRAM_PATH true 1)
 					
@@ -2355,7 +2356,8 @@ install_profile()
 					# If there is module instalaltion error during profile installation,
 					# we remove all profile related modules
 					
-					for module in "${add_modules[@]}"; do
+					for module in "${add_modules[@]}"
+					do
 
 						local module_so_file="$module_install_path/$module.so"
 						local module_py_file="$module_install_path/$module.py"
