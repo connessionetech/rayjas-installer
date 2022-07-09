@@ -1949,9 +1949,20 @@ install_module()
 			fi
 
 
-			local url=$(get_module_url $module_name)
+			# check and see if module excists and if yes fetch url
+			local url=
+			local link=$PROGRAM_ARCHIVE_LOCATION
+			local module_archive_name="$module_name.zip"			
 			local deploy_path="$base_dir/oneadmin/modules"
 			local module_conf="$deploy_path/conf/$module_name.json"
+
+			link=$(echo "$link" | sed "s/core/modules/")
+			link=$(echo "$link" | sed "s/grahil.zip/$module_name/")
+			if http_file_exists $link; then
+				url=$link
+			fi
+
+			
 
 
 			if [ -z "$url" ]; then
