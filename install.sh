@@ -1957,7 +1957,7 @@ install_module()
 			local module_conf="$deploy_path/conf/$module_name.json"
 
 			link=$(echo "$link" | sed "s/core/modules/")
-			link=$(echo "$link" | sed "s/grahil.zip/$module_name/")
+			link=$(echo "$link" | sed "s/grahil.zip/$module_archive_name/")
 			if http_file_exists $link; then
 				url=$link
 			fi
