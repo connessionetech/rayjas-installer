@@ -3714,8 +3714,7 @@ update_installation_meta()
 			CURRENT_INSTALLATION_PROFILE=$profile_name
 			local result=$(<$PROGRAM_INSTALLATION_REPORT_FILE)
 			local tmpfile=$(echo "${PROGRAM_INSTALLATION_REPORT_FILE/.json/.tmp}")
-
-			echo "$( jq '.profile = "$CURRENT_INSTALLATION_PROFILE"' $PROGRAM_INSTALLATION_REPORT_FILE )" > $tmpfile
+			sudo echo "$( jq --arg profile_name "$CURRENT_INSTALLATION_PROFILE" '.profile = "$profile_name"' $PROGRAM_INSTALLATION_REPORT_FILE )" > $tmpfile
 			sudo mv $tmpfile $PROGRAM_INSTALLATION_REPORT_FILE
 		else
 			lecho_err "Minimum of 1 parameter is required!"
