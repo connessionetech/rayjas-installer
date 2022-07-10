@@ -2299,12 +2299,27 @@ install_profile()
 						local target_rule="$rules_install_path/$rule.json"
 
 						if [ -f "$installable_rule" ]; then
-							if [ ! -f "$target_rule" ]; then
+
+							if [ -f "$target_rule" ]; then
+
+								local response=
+								lecho "Target $target_rule rule already exists. Proceeding with this operation will overwrite the existing rule."
+								read -r -p "Do you wish to continue? [y/N] " response
+								case $response in
+									[yY][eE][sS]|[yY]) 
+										lecho "Installing rule.."
+									;;
+									*)
+										error=1
+										lecho_err="Rule installation for $installable_rule cancelled!"
+										continue
+									;;
+								esac
+
 								lecho "Moving rule $installable_rule to $target_rule"
 								sudo mv $installable_rule $target_rule
 								sudo chown $USER: "$target_rule"
-							else
-								lecho "Target rule already exists. Skipping rule installation for $installable_rule"					
+								
 							fi
 						else
 							lecho "Something is wrong! Installable rule $installable_rule does not exist in the profile package."					
@@ -2338,18 +2353,31 @@ install_profile()
 					do
 
 						script=${script//$'\n'/} # Remove all newlines.
-							
-						local installable_script="$scripts_install_path/$script.sh" 
-						local target_script="$scripts_source_path/$script.sh"
+
+						local installable_script="$scripts_source_path/$rule.json" 
+						local target_script="$scripts_install_path/$rule.json"
 
 						if [ -f "$installable_script" ]; then
-							if [ ! -f "$target_script" ]; then
+
+							if [ -f "$target_script" ]; then
+								local response=
+								lecho "Target script $target_script already exists. Proceeding with this operation will overwrite the existing script."
+								read -r -p "Do you wish to continue? [y/N] " response
+								case $response in
+									[yY][eE][sS]|[yY]) 
+										lecho "Installing script.."
+									;;
+									*)
+										error=1
+										lecho_err="Script installation for $installable_rule cancelled!"
+										continue
+									;;
+								esac
+
 								lecho "Moving script $installable_script to $target_script"
 								sudo mv $installable_script $target_script
 								sudo chown $USER: "$target_script"
 								sudo chmod +x "$target_script"
-							else
-								lecho "Target script already exists. Skipping rule installation for $installable_script"					
 							fi
 						else
 							lecho "Something is wrong! Installable script $installable_script does not exist in the profile package."					
