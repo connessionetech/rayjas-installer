@@ -2530,7 +2530,7 @@ clear_profile()
 		if [ -z "$profile_name" ]; then
 
 			error=1
-			err_message="No profile was set!"
+			err_message="No profile was found set for the current installation!"
 
 		else
 					
@@ -4728,10 +4728,31 @@ validate_args()
 
 		# validate value
 		if [ "$args_update_mode" -lt "-1" ] || [ "$args_update_mode" -gt "1" ]; then
-			echo "Invalid value for -update flag." && exit 1
+			lecho_err "Invalid value for -update flag." && exit 1
 		fi
-
 	fi
+	
+
+
+	# if profile requested
+	if [[ "$args_profile_request" -eq 1 ]]; then
+
+		# if uninstall requested
+		if [ "$args_update_mode" -eq "-1" ]; then # removal
+
+			# validate value
+			if [ "$args_profile_name" != "reset" ]; then
+				lecho_err "Invalid profile parameter provided!.For clearing profile, please use the profile name as `reset`." && exit 1
+			fi	
+		elif [[ "$args_update_mode" -eq 0 ]]; then # installation
+
+			# validate value
+			if [ -z ${args_profile_name+x} ]; then
+				lecho_err "Profile name must be expected but was not provided." && exit 1
+			fi
+		fi
+	fi
+
 
 
 	# if module installation requested
@@ -4739,7 +4760,7 @@ validate_args()
 		
 		# validate value
 		if [ -z ${args_module_name+x} ]; then
-			echo "Module name must be expected but was not provided." && exit 1
+			lecho_err "Module name must be expected but was not provided." && exit 1
 		fi
 
 	fi
