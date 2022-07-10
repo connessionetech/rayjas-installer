@@ -1920,6 +1920,7 @@ install_module()
 	local return_status=0
 	local error=0
 	local err_message=
+	local silent_mode=0
 
 	module_install_success=0
 
@@ -1931,11 +1932,22 @@ install_module()
 			error=1
 			err_message="Minimum of 1 parameter is required!"
 		else
-			if [ $# -gt 3 ]; then
+			if [ $# -gt 4 ]; then
 				module_name=$1
 				base_dir=$2
 				force=$3
 				return_status=$4
+				silent_mode=$5
+
+				if [[ "$return_status" -eq 1 ]] || [[ "$silent_mode" -eq 1 ]]; then
+					force=true
+				fi
+			elif [ $# -gt 3 ]; then
+				module_name=$1
+				base_dir=$2
+				force=$3
+				return_status=$4
+				
 				if [[ "$return_status" -eq 1 ]]; then
 					force=true
 				fi
@@ -2001,7 +2013,9 @@ install_module()
 
 				if [[ "$name" == *"$current_python.so" ]]; then				
 					# Move tmp file to main location
-					lecho "Moving runtime file $j to $deploy_path/$module_name.so"
+					if [[ "$silent_mode" -eq 0 ]]; then
+						lecho "Moving runtime file $j to $deploy_path/$module_name.so"
+					fi
 					sudo mv $j $deploy_path/$module_name.so
 					sudo chown $USER: "$deploy_path/$module_name.so"
 
@@ -2012,12 +2026,16 @@ install_module()
 
 				elif [[ $name == *".json" ]]; then					
 					# Move tmp file to main location
-					lecho "Moving conf file $j to $deploy_path/conf/$module_name.json"
+					if [[ "$silent_mode" -eq 0 ]]; then
+						lecho "Moving conf file $j to $deploy_path/conf/$module_name.json"
+					fi
 					sudo mv $j $deploy_path/conf/$module_name.json
 					sudo chown $USER: "$deploy_path/conf/$module_name.json"
 				elif [[ $name == *".py" ]]; then					
 					# Move tmp file to main location
-					lecho "Moving runtime file $j to $deploy_path/$module_name.py"
+					if [[ "$silent_mode" -eq 0 ]]; then
+						lecho "Moving runtime file $j to $deploy_path/$module_name.py"
+					fi
 					sudo mv $j $deploy_path/$module_name.py
 					sudo chown $USER: "$deploy_path/$module_name.py"
 
@@ -2035,7 +2053,9 @@ install_module()
 			if [[ "$return_status" -eq 1 ]]; then
 				error=0 && echo $error
 			else
-				lecho "Processing completed. You may want to restart $PROGRAM_NAME service"
+				if [[ "$silent_mode" -eq 0 ]]; then
+					lecho "Processing completed. You may want to restart $PROGRAM_NAME service"
+				fi
 			fi
 
 		else
@@ -2043,7 +2063,9 @@ install_module()
 			if [[ "$return_status" -eq 1 ]]; then
 				error=1 && echo $error
 			else
-				lecho_err "An error occurred. $err_message"
+				if [[ "$silent_mode" -eq 0 ]]; then
+					lecho_err "An error occurred. $err_message"
+				fi
 			fi		
 
 		fi			
@@ -2053,7 +2075,9 @@ install_module()
 		if [[ "$return_status" -eq 1 ]]; then
 			error=1 && echo $error
 		else
-			lecho_err "Program core was not found. Please install the program before attempting to install modules."
+			if [[ "$silent_mode" -eq 0 ]]; then
+				lecho_err "Program core was not found. Please install the program before attempting to install modules."
+			fi
 		fi		
 	fi
 }
@@ -2141,6 +2165,7 @@ install_profile()
 	local base_dir=$DEFAULT_PROGRAM_PATH	
 	local force=false
 	local return_status=0
+	local silent_mode=0
 	local error=0
 	local err_message=	
 
@@ -2208,7 +2233,7 @@ install_profile()
 				do				
 					module=${module//$'\n'/} # Remove all newlines.
 					#local install_error=$(install_module $module $DEFAULT_PROGRAM_PATH true 1)
-					install_module $module $DEFAULT_PROGRAM_PATH true
+					install_module $module $DEFAULT_PROGRAM_PATH true 0 1
 					
 					if [ "$module_install_success" -eq 1 ]; then					
 						err_message="Failed to install module $module."
@@ -2232,7 +2257,7 @@ install_profile()
 
 				done
 
-				# If no module installer error -> continue profile setup
+				# If no module installer error -> continue profile setup				
 
 				if [[ "$module_install_success" -eq 1 ]]; then
 
