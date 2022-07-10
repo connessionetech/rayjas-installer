@@ -2511,12 +2511,13 @@ clear_profile()
 
 	if [ "$program_exists" -eq 1 ]; then
 
-		if [ $# -lt 1 ]; then
-			error=1
-			err_message="Minimum of 1 parameter is required!"
-
-		elif [ $# -gt 0 ]; then
+		if [ $# -gt 0 ]; then
 			base_dir=$1
+			
+			if [ ! -d "$base_dir" ]; then
+				error=1
+				err_message="Path $base_dir does not exist!"
+			fi
 		fi
 
 		# read manifest
