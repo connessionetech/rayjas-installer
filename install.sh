@@ -2206,6 +2206,7 @@ install_profile()
 
 				for module in "${add_modules[@]}"
 				do				
+					module=${module//$'\n'/} # Remove all newlines.
 					#local install_error=$(install_module $module $DEFAULT_PROGRAM_PATH true 1)
 					install_module $module $DEFAULT_PROGRAM_PATH true
 					
@@ -2238,6 +2239,8 @@ install_profile()
 					# remove unwanted modules
 					for module in "${remove_modules[@]}"
 					do
+						module=${module//$'\n'/} # Remove all newlines.
+
 						local module_so_file="$module_install_path/$module.so"
 						local module_py_file="$module_install_path/$module.py"
 						local module_conf_file="$module_conf_install_path/$module.json"
@@ -2265,6 +2268,8 @@ install_profile()
 					for rule in "${add_rules[@]}"
 					do
 
+						rule=${rule//$'\n'/} # Remove all newlines.
+
 						local installable_rule="$rules_source_path/$rule.json" 
 						local target_rule="$rules_install_path/$rule.json"
 
@@ -2288,6 +2293,8 @@ install_profile()
 					for rule in "${remove_rules[@]}"
 					do
 
+						rule=${rule//$'\n'/} # Remove all newlines.
+
 						local removable_rule="$rules_install_path/$rule.json"
 
 						if [ -f "$removable_rule" ]; then
@@ -2303,6 +2310,8 @@ install_profile()
 
 					for script in "${add_scripts[@]}"
 					do
+
+						script=${script//$'\n'/} # Remove all newlines.
 							
 						local installable_script="$scripts_install_path/$script.json" 
 						local target_script="$scripts_source_path/$script.json"
@@ -2325,6 +2334,8 @@ install_profile()
 
 					for script in "${remove_scripts[@]}"
 					do
+
+						script=${script//$'\n'/} # Remove all newlines.
 
 						local removable_script="$scripts_install_path/$script.json"
 
@@ -2363,6 +2374,8 @@ install_profile()
 					
 					for module in "${add_modules[@]}"
 					do
+
+						module=${module//$'\n'/} # Remove all newlines.
 
 						local module_so_file="$module_install_path/$module.so"
 						local module_py_file="$module_install_path/$module.py"
