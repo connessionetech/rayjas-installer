@@ -2409,7 +2409,7 @@ install_profile()
 					if [ ! -f "$PROGRAM_INSTALLATION_REPORT_FILE" ]; then
 						echo "No installation report found."
 					else
-						update_installation_meta $profile_name
+						update_installation_meta ""
 					fi
 
 
@@ -2513,7 +2513,7 @@ clear_profile()
 
 		if [ $# -gt 0 ]; then
 			base_dir=$1
-			
+
 			if [ ! -d "$base_dir" ]; then
 				error=1
 				err_message="Path $base_dir does not exist!"
