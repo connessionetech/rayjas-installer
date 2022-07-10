@@ -2247,14 +2247,14 @@ install_profile()
 					# copy over any specific configuration
 					if [ -f "$module_conf_source_file" ]; then
 						lecho "Copying over custom module configuration $module_conf_source_file to $module_conf_target_file"
-						sudo mv $module_conf_source_file $module_conf_target_file				
+						sudo mv $module_conf_source_file $module_conf_target_file							
+						sudo chown $USER: "$module_conf_target_file"			
 					fi
 
 					# enable required modules
 					local tmpfile=$(echo "${module_conf_target_file/.json/.tmp}")
 					sudo echo "$( jq '.enabled = "true"' $module_conf_target_file )" > $tmpfile
 					sudo mv $tmpfile $module_conf_target_file
-
 				done
 
 				# If no module installer error -> continue profile setup				
@@ -2302,6 +2302,7 @@ install_profile()
 							if [ ! -f "$target_rule" ]; then
 								lecho "Moving rule $installable_rule to $target_rule"
 								sudo mv $installable_rule $target_rule
+								sudo chown $USER: "$target_rule"
 							else
 								lecho "Target rule already exists. Skipping rule installation for $installable_rule"					
 							fi
@@ -2345,6 +2346,7 @@ install_profile()
 							if [ ! -f "$target_script" ]; then
 								lecho "Moving script $installable_script to $target_script"
 								sudo mv $installable_script $target_script
+								sudo chown $USER: "$target_script"
 							else
 								lecho "Target script already exists. Skipping rule installation for $installable_script"					
 							fi
