@@ -4277,8 +4277,17 @@ main()
 					prerequisites_python
 				fi
 
-				echo "Installing module $args_module_name" && sleep 2
-				install_module $args_module_name
+				if [[ $args_enable_disable_request -eq 1 ]]; then
+
+					if [ "$args_enable_disable" == "true" ]; then
+						enable_module $args_module_name
+					else
+						disable_module $args_module_name
+					fi					
+				else
+					echo "Installing module $args_module_name" && sleep 2
+					install_module $args_module_name
+				fi			
 
 			else				
 				echo "Installing core" && sleep 2 
