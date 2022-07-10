@@ -2417,11 +2417,11 @@ install_profile()
 					restart_grahil_service
 
 
-					if [[ "$return_status" -eq 1 ]]; then
-						error=0 && echo $error
-					else
-						lecho "Processing completed. You may want to restart $PROGRAM_NAME service"
-					fi
+					#if [[ "$return_status" -eq 1 ]]; then
+					#	error=0 && echo $error
+					#else
+					#	lecho "Processing completed. You may want to restart $PROGRAM_NAME service"
+					#fi
 
 				else
 
