@@ -2315,12 +2315,12 @@ install_profile()
 										continue
 									;;
 								esac
-
-								lecho "Moving rule $installable_rule to $target_rule"
-								sudo mv $installable_rule $target_rule
-								sudo chown $USER: "$target_rule"
 								
 							fi
+
+							lecho "Moving rule $installable_rule to $target_rule"
+							sudo mv $installable_rule $target_rule
+							sudo chown $USER: "$target_rule"
 						else
 							lecho "Something is wrong! Installable rule $installable_rule does not exist in the profile package."					
 						fi
@@ -2372,13 +2372,13 @@ install_profile()
 										lecho_err="Script installation for $installable_rule cancelled!"
 										continue
 									;;
-								esac
-
-								lecho "Moving script $installable_script to $target_script"
-								sudo mv $installable_script $target_script
-								sudo chown $USER: "$target_script"
-								sudo chmod +x "$target_script"
+								esac								
 							fi
+
+							lecho "Moving script $installable_script to $target_script"
+							sudo mv $installable_script $target_script
+							sudo chown $USER: "$target_script"
+							sudo chmod +x "$target_script"
 						else
 							lecho "Something is wrong! Installable script $installable_script does not exist in the profile package."					
 						fi
