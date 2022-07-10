@@ -4738,13 +4738,13 @@ validate_args()
 	if [[ "$args_profile_request" -eq 1 ]]; then
 
 		# if uninstall requested
-		if [[ "$args_update_mode" -lt 1 ]]; then # removal
+		if [[ "$args_update_mode" -lt 0 ]]; then # removal
 
 			# validate value
 			if [ "$args_profile_name" != "reset" ]; then
 				lecho_err "Invalid profile parameter provided!.For clearing profile, please use the profile name as -> "reset"." && exit 1
 			fi	
-			
+
 		elif [[ "$args_update_mode" -eq 0 ]]; then # installation
 
 			# validate value
