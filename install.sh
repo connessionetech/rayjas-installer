@@ -2339,14 +2339,15 @@ install_profile()
 
 						script=${script//$'\n'/} # Remove all newlines.
 							
-						local installable_script="$scripts_install_path/$script.json" 
-						local target_script="$scripts_source_path/$script.json"
+						local installable_script="$scripts_install_path/$script.sh" 
+						local target_script="$scripts_source_path/$script.sh"
 
 						if [ -f "$installable_script" ]; then
 							if [ ! -f "$target_script" ]; then
 								lecho "Moving script $installable_script to $target_script"
 								sudo mv $installable_script $target_script
 								sudo chown $USER: "$target_script"
+								sudo chmod +x "$target_script"
 							else
 								lecho "Target script already exists. Skipping rule installation for $installable_script"					
 							fi
@@ -2364,7 +2365,7 @@ install_profile()
 
 						script=${script//$'\n'/} # Remove all newlines.
 
-						local removable_script="$scripts_install_path/$script.json"
+						local removable_script="$scripts_install_path/$script.sh"
 
 						if [ -f "$removable_script" ]; then
 							sudo rm $removable_script
