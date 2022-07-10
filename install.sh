@@ -1858,7 +1858,10 @@ enable_module()
 	local module_conf_path="$DEFAULT_PROGRAM_PATH/modules/conf/$module_name.json"
 
 	if [ -f "$module_conf_path" ]; then
-		echo "$(jq '.enabled = "true"' $module_conf_path)" > $module_conf_path
+		# enable required modules
+		local tmpfile=$(echo "${module_conf_path/.json/.tmp}")
+		sudo echo "$( jq '.enabled = "true"' $module_conf_path )" > $tmpfile
+		sudo mv $tmpfile $module_conf_path
 	else
 		echo "Module config for '$module_name' not found!"
 	fi
@@ -1883,7 +1886,9 @@ disable_module()
 	local module_conf_path="$DEFAULT_PROGRAM_PATH/modules/conf/$module_name.json"
 	
 	if [ -f "$module_conf_path" ]; then
-		echo "$(jq '.enabled = "false"' $module_conf_path)" > $module_conf_path
+		local tmpfile=$(echo "${module_conf_path/.json/.tmp}")
+		sudo echo "$( jq '.enabled = "false"' $module_conf_path )" > $tmpfile
+		sudo mv $tmpfile $module_conf_path
 	else
 		echo "Module config for '$module_name' not found!"
 	fi
