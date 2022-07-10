@@ -2514,138 +2514,138 @@ clear_profile()
 		if [ $# -lt 1 ]; then
 			error=1
 			err_message="Minimum of 1 parameter is required!"
-		else
+
+		elif [ $# -gt 0 ]; then
 			base_dir=$1
+		fi
+
+		# read manifest
+		read_installation_meta
+
+		# identify profile
+		local profile_name=$CURRENT_INSTALLATION_PROFILE
+
+		# download profile
+		local url=$(get_profile_url $profile_name)			
+		if [ -z "$url" ]; then
+			error=1
+			err_message="Profile not found/cannot be installed!"
+		fi
+
+		# ALL OK -> Do Ops		
+		if [[ "$error" -eq 0 ]]; then
+
+			local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
+			local profile_archive="$tmp_dir/$profile_name.zip"	
+			local profile_package_path="$tmp_dir/$profile_name"
+
+			local module_conf_source_path="$profile_package_path/modules/conf"
+			local scripts_source_path="$profile_package_path/scripts"
+			local rules_source_path="$profile_package_path/rules"
+			
+			local module_install_path="$base_dir/oneadmin/modules"
+			local module_conf_install_path="$base_dir/oneadmin/modules/conf"
+			local scripts_install_path="$base_dir/scripts"
+			local rules_install_path="$base_dir/rules"
+
+			# extract profile archive to a tmp location
+
+			sudo wget -O "$profile_archive" "$url"
+			sudo unzip $profile_archive -d $profile_package_path	
+
+			# read meta file
+			local meta_file="$profile_package_path/meta.json"
+			local result=$(<$meta_file)
+
+			local profile_name=$(jq -r '.name' <<< ${result})		
+			local add_modules=($(jq -r '.modules.add' <<< ${result}  | tr -d '[]," '))		
+			local remove_modules=($(jq -r '.modules.remove' <<< ${result}  | tr -d '[]," '))
+			local add_rules=($(jq -r '.rules.add' <<< ${result}  | tr -d '[]," '))
+			local remove_rules=($(jq -r '.rules.remove' <<< ${result}  | tr -d '[]," '))
+			local add_scripts=($(jq -r '.scripts.add' <<< ${result}  | tr -d '[]," '))
+			local remove_scripts=($(jq -r '.scripts.remove' <<< ${result}  | tr -d '[]," '))
 
 
-			# read manifest
-			read_installation_meta
+			# remove profile modules
+			for module in "${add_modules[@]}"
+			do				
+				module=${module//$'\n'/} # Remove all newlines.
 
-			# identify profile
-			local profile_name=$CURRENT_INSTALLATION_PROFILE
+				local module_so_file="$module_install_path/$module.so"
+				local module_py_file="$module_install_path/$module.py"
+				local module_conf_file="$module_conf_install_path/$module.json"
 
-			# download profile
-			local url=$(get_profile_url $profile_name)			
-			if [ -z "$url" ]; then
-				error=1
-				err_message="Profile not found/cannot be installed!"
-			fi
-
-			# ALL OK -> Do Ops		
-			if [[ "$error" -eq 0 ]]; then
-
-				local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
-				local profile_archive="$tmp_dir/$profile_name.zip"	
-				local profile_package_path="$tmp_dir/$profile_name"
-
-				local module_conf_source_path="$profile_package_path/modules/conf"
-				local scripts_source_path="$profile_package_path/scripts"
-				local rules_source_path="$profile_package_path/rules"
-				
-				local module_install_path="$base_dir/oneadmin/modules"
-				local module_conf_install_path="$base_dir/oneadmin/modules/conf"
-				local scripts_install_path="$base_dir/scripts"
-				local rules_install_path="$base_dir/rules"
-
-				# extract profile archive to a tmp location
-
-				sudo wget -O "$profile_archive" "$url"
-				sudo unzip $profile_archive -d $profile_package_path	
-
-				# read meta file
-				local meta_file="$profile_package_path/meta.json"
-				local result=$(<$meta_file)
-
-				local profile_name=$(jq -r '.name' <<< ${result})		
-				local add_modules=($(jq -r '.modules.add' <<< ${result}  | tr -d '[]," '))		
-				local remove_modules=($(jq -r '.modules.remove' <<< ${result}  | tr -d '[]," '))
-				local add_rules=($(jq -r '.rules.add' <<< ${result}  | tr -d '[]," '))
-				local remove_rules=($(jq -r '.rules.remove' <<< ${result}  | tr -d '[]," '))
-				local add_scripts=($(jq -r '.scripts.add' <<< ${result}  | tr -d '[]," '))
-				local remove_scripts=($(jq -r '.scripts.remove' <<< ${result}  | tr -d '[]," '))
-
-
-				# remove profile modules
-				for module in "${add_modules[@]}"
-				do				
-					module=${module//$'\n'/} # Remove all newlines.
-
-					local module_so_file="$module_install_path/$module.so"
-					local module_py_file="$module_install_path/$module.py"
-					local module_conf_file="$module_conf_install_path/$module.json"
-
-					# delete module file
-					if [ -f "$module_so_file" ]; then
-						lecho "Deleting module file $module_so_file"
-						sudo rm $module_so_file
-					elif [ -f "$module_py_file" ]; then
-						lecho "Deleting module file $module_py_file"
-						sudo rm $module_py_file
-					fi
-
-					# delete module conf file
-					if [ -f "$module_conf_file" ]; then
-						lecho "Deleting module config file $module_conf_file"
-						sudo rm $module_conf_file
-					fi
-
-				done
-
-
-				# remove profile rules
-
-				for rule in "${add_rules[@]}"
-				do
-
-					rule=${rule//$'\n'/} # Remove all newlines.
-
-					local removable_rule="$rules_install_path/$rule.json"
-
-					if [ -f "$removable_rule" ]; then
-						sudo rm $removable_rule
-					else
-						lecho "Rule $removable_rule does not exist at target location. Nothing to remove here!."					
-					fi
-				done
-
-
-
-				# remove profile scripts
-
-				for script in "${add_scripts[@]}"
-				do
-					script=${script//$'\n'/} # Remove all newlines.
-
-					local removable_script="$scripts_install_path/$script.sh"
-
-					if [ -f "$removable_script" ]; then
-						sudo rm $removable_script
-					else
-						lecho "Script $removable_script does not exist at target location. Nothing to remove here!."					
-					fi
-
-				done
-
-
-
-				# once eveything is done mark current profile selection 
-				# => store active profile somewhere
-				if [ ! -f "$PROGRAM_INSTALLATION_REPORT_FILE" ]; then
-					echo "No installation report found."
-				else
-					update_installation_meta $profile_name
+				# delete module file
+				if [ -f "$module_so_file" ]; then
+					lecho "Deleting module file $module_so_file"
+					sudo rm $module_so_file
+				elif [ -f "$module_py_file" ]; then
+					lecho "Deleting module file $module_py_file"
+					sudo rm $module_py_file
 				fi
 
-				# restart service
-				restart_grahil_service
+				# delete module conf file
+				if [ -f "$module_conf_file" ]; then
+					lecho "Deleting module config file $module_conf_file"
+					sudo rm $module_conf_file
+				fi
+
+			done
+
+
+			# remove profile rules
+
+			for rule in "${add_rules[@]}"
+			do
+
+				rule=${rule//$'\n'/} # Remove all newlines.
+
+				local removable_rule="$rules_install_path/$rule.json"
+
+				if [ -f "$removable_rule" ]; then
+					sudo rm $removable_rule
+				else
+					lecho "Rule $removable_rule does not exist at target location. Nothing to remove here!."					
+				fi
+			done
+
+
+
+			# remove profile scripts
+
+			for script in "${add_scripts[@]}"
+			do
+				script=${script//$'\n'/} # Remove all newlines.
+
+				local removable_script="$scripts_install_path/$script.sh"
+
+				if [ -f "$removable_script" ]; then
+					sudo rm $removable_script
+				else
+					lecho "Script $removable_script does not exist at target location. Nothing to remove here!."					
+				fi
+
+			done
+
+
+
+			# once eveything is done mark current profile selection 
+			# => store active profile somewhere
+			if [ ! -f "$PROGRAM_INSTALLATION_REPORT_FILE" ]; then
+				echo "No installation report found."
 			else
-				if [[ "$return_status" -eq 1 ]]; then
-					error=1 && echo $error
-				else
-					lecho_err "An error occurred while clearing preofile. $err_message"
-				fi
+				update_installation_meta $profile_name
 			fi
-		fi	
+
+			# restart service
+			restart_grahil_service
+		else
+			if [[ "$return_status" -eq 1 ]]; then
+				error=1 && echo $error
+			else
+				lecho_err "An error occurred while clearing preofile. $err_message"
+			fi
+		fi
 	else
 
 		if [[ "$return_status" -eq 1 ]]; then
