@@ -3683,7 +3683,8 @@ write_installation_meta()
 	local interpreterpath="$PYTHON_VIRTUAL_ENV_LOCATION/$PROGRAM_FOLDER_NAME/bin/python$PYTHON_VERSION"
 	local requirements_filename=$(basename -- "$REQUIREMENTS_FILE")
 	
-	jq -n --arg profile "$profile" --arg interpreterpath "$interpreterpath" --arg pythonversion "$pythonversion" --arg installtime "$installtime" --arg requirements_filename "$requirements_filename" '{install_time: $installtime, python_version: $pythonversion, interpreter: $interpreterpath, requirements: $requirements_filename}' | sudo tee "$PROGRAM_INSTALLATION_REPORT_FILE" > /dev/null
+	jq -n --arg profile "$profile" --arg interpreterpath "$interpreterpath" --arg pythonversion "$pythonversion" --arg installtime "$installtime" --arg requirements_filename "$requirements_filename" '{install_time: $installtime, python_version: $pythonversion, interpreter: $interpreterpath, requirements: $requirements_filename, profile: $profile}' | sudo tee "$PROGRAM_INSTALLATION_REPORT_FILE" > /dev/null
+	sudo chown -R $USER: "$PROGRAM_INSTALLATION_REPORT_FILE"
 }
 
 
