@@ -3683,7 +3683,7 @@ write_installation_meta()
 	local interpreterpath="$PYTHON_VIRTUAL_ENV_LOCATION/$PROGRAM_FOLDER_NAME/bin/python$PYTHON_VERSION"
 	local requirements_filename=$(basename -- "$REQUIREMENTS_FILE")
 	
-	jq -n --arg $profile_name "$profile" --arg interpreterpath "$interpreterpath" --arg pythonversion "$pythonversion" --arg installtime "$installtime" --arg requirements_filename "$requirements_filename" '{install_time: $installtime, python_version: $pythonversion, interpreter: $interpreterpath, requirements: $requirements_filename, profile: $profile_name}' | sudo tee "$PROGRAM_INSTALLATION_REPORT_FILE" > /dev/null
+	jq -n --arg profile "$profile" --arg interpreterpath "$interpreterpath" --arg pythonversion "$pythonversion" --arg installtime "$installtime" --arg requirements_filename "$requirements_filename" '{install_time: $installtime, python_version: $pythonversion, interpreter: $interpreterpath, requirements: $requirements_filename}' | sudo tee "$PROGRAM_INSTALLATION_REPORT_FILE" > /dev/null
 }
 
 
@@ -3710,7 +3710,7 @@ update_installation_meta()
 
 		if [ $# -gt 0 ]; then
 			profile_name=$1	
-			CURRENT_INSTALLATION_PROFILE=$profile_name			
+			CURRENT_INSTALLATION_PROFILE=$profile_name
 			local result=$(<$PROGRAM_INSTALLATION_REPORT_FILE)
 			local tmpfile=$(echo "${PROGRAM_INSTALLATION_REPORT_FILE/.json/.tmp}")
 			sudo echo "$( jq '.profile = "$CURRENT_INSTALLATION_PROFILE"' $PROGRAM_INSTALLATION_REPORT_FILE )" > $tmpfile
