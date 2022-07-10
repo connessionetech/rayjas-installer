@@ -1898,6 +1898,63 @@ disable_module()
 
 
 #############################################
+# Enable a grahil reaction rule
+# 
+# GLOBALS:
+#		
+# ARGUMENTS:
+#		$1: Rule name
+# RETURN:
+#		
+#############################################
+enable_reaction_rule()
+{
+	local rule_name=$1
+	local rule_path="$DEFAULT_PROGRAM_PATH/rules/$rule_name.json"
+
+	if [ -f "$rule_path" ]; then
+		# enable required modules
+		local tmpfile=$(echo "${rule_path/.json/.tmp}")
+		sudo echo "$( jq '.enabled = "true"' $rule_path )" > $tmpfile
+		sudo mv $tmpfile $rule_path
+	else
+		echo "Rule by name '$rule_name' not found!"
+	fi
+}
+
+
+
+
+
+#############################################
+# Disable a grahil reaction rule
+# 
+# GLOBALS:
+#		
+# ARGUMENTS:
+#		$1: Rule name
+# RETURN:
+#		
+#############################################
+disable_reaction_rule()
+{
+	local rule_name=$1
+	local rule_path="$DEFAULT_PROGRAM_PATH/rules/$rule_name.json"
+
+	if [ -f "$rule_path" ]; then
+		# enable required modules
+		local tmpfile=$(echo "${rule_path/.json/.tmp}")
+		sudo echo "$( jq '.enabled = "false"' $rule_path )" > $tmpfile
+		sudo mv $tmpfile $rule_path
+	else
+		echo "Rule by name '$rule_name' not found!"
+	fi
+}
+
+
+
+
+#############################################
 # Installs a grahil module meant for current 
 # platform/python version from the archives to
 # the currently active grahil installation
