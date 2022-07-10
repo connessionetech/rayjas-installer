@@ -2656,7 +2656,7 @@ clear_profile()
 			if [[ "$return_status" -eq 1 ]]; then
 				error=1 && echo $error
 			else
-				lecho_err "An error occurred while clearing preofile. $err_message"
+				lecho_err "An error occurred while clearing profile. $err_message"
 			fi
 		fi
 	else
