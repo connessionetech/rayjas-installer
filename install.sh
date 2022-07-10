@@ -2173,7 +2173,7 @@ install_profile()
 
 	if [ "$program_exists" -eq 1 ]; then
 
-		if [ $# -lt 0 ]; then
+		if [ $# -lt 1 ]; then
 			error=1
 			err_message="Minimum of 1 parameter is required!"
 		else
@@ -2476,9 +2476,188 @@ install_profile()
 		else
 			lecho_err "Program core was not found. Please install the program before attempting to install profiles."
 		fi		
+	fi	
+}
+
+
+
+
+
+
+#############################################
+# Removes any installed profile resetting
+# grahil to vanilla state.
+# 
+#
+# GLOBALS:
+#		DEFAULT_PROGRAM_PATH, PROGRAM_NAME
+#
+# ARGUMENTS:
+#			$1 = base directory path of grahil installation. defaults to DEFAULT_PROGRAM_PATH - String path
+#
+#
+# RETURN:
+#		
+#############################################
+clear_profile()
+{
+	local base_dir=$DEFAULT_PROGRAM_PATH	
+	local return_status=0
+	local silent_mode=0
+	local error=0
+	local err_message=	
+
+	check_current_installation 1 1
+
+	if [ "$program_exists" -eq 1 ]; then
+
+		if [ $# -lt 1 ]; then
+			error=1
+			err_message="Minimum of 1 parameter is required!"
+		else
+			base_dir=$1
+
+
+			# read manifest
+			read_installation_meta
+
+			# identify profile
+			local profile_name=$CURRENT_INSTALLATION_PROFILE
+
+			# download profile
+			local url=$(get_profile_url $profile_name)			
+			if [ -z "$url" ]; then
+				error=1
+				err_message="Profile not found/cannot be installed!"
+			fi
+
+			# ALL OK -> Do Ops		
+			if [[ "$error" -eq 0 ]]; then
+
+				local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
+				local profile_archive="$tmp_dir/$profile_name.zip"	
+				local profile_package_path="$tmp_dir/$profile_name"
+
+				local module_conf_source_path="$profile_package_path/modules/conf"
+				local scripts_source_path="$profile_package_path/scripts"
+				local rules_source_path="$profile_package_path/rules"
+				
+				local module_install_path="$base_dir/oneadmin/modules"
+				local module_conf_install_path="$base_dir/oneadmin/modules/conf"
+				local scripts_install_path="$base_dir/scripts"
+				local rules_install_path="$base_dir/rules"
+
+				# extract profile archive to a tmp location
+
+				sudo wget -O "$profile_archive" "$url"
+				sudo unzip $profile_archive -d $profile_package_path	
+
+				# read meta file
+				local meta_file="$profile_package_path/meta.json"
+				local result=$(<$meta_file)
+
+				local profile_name=$(jq -r '.name' <<< ${result})		
+				local add_modules=($(jq -r '.modules.add' <<< ${result}  | tr -d '[]," '))		
+				local remove_modules=($(jq -r '.modules.remove' <<< ${result}  | tr -d '[]," '))
+				local add_rules=($(jq -r '.rules.add' <<< ${result}  | tr -d '[]," '))
+				local remove_rules=($(jq -r '.rules.remove' <<< ${result}  | tr -d '[]," '))
+				local add_scripts=($(jq -r '.scripts.add' <<< ${result}  | tr -d '[]," '))
+				local remove_scripts=($(jq -r '.scripts.remove' <<< ${result}  | tr -d '[]," '))
+
+
+				# remove profile modules
+				for module in "${add_modules[@]}"
+				do				
+					module=${module//$'\n'/} # Remove all newlines.
+
+					local module_so_file="$module_install_path/$module.so"
+					local module_py_file="$module_install_path/$module.py"
+					local module_conf_file="$module_conf_install_path/$module.json"
+
+					# delete module file
+					if [ -f "$module_so_file" ]; then
+						lecho "Deleting module file $module_so_file"
+						sudo rm $module_so_file
+					elif [ -f "$module_py_file" ]; then
+						lecho "Deleting module file $module_py_file"
+						sudo rm $module_py_file
+					fi
+
+					# delete module conf file
+					if [ -f "$module_conf_file" ]; then
+						lecho "Deleting module config file $module_conf_file"
+						sudo rm $module_conf_file
+					fi
+
+				done
+
+
+				# remove profile rules
+
+				for rule in "${add_rules[@]}"
+				do
+
+					rule=${rule//$'\n'/} # Remove all newlines.
+
+					local removable_rule="$rules_install_path/$rule.json"
+
+					if [ -f "$removable_rule" ]; then
+						sudo rm $removable_rule
+					else
+						lecho "Rule $removable_rule does not exist at target location. Nothing to remove here!."					
+					fi
+				done
+
+
+
+				# remove profile scripts
+
+				for script in "${add_scripts[@]}"
+				do
+					script=${script//$'\n'/} # Remove all newlines.
+
+					local removable_script="$scripts_install_path/$script.sh"
+
+					if [ -f "$removable_script" ]; then
+						sudo rm $removable_script
+					else
+						lecho "Script $removable_script does not exist at target location. Nothing to remove here!."					
+					fi
+
+				done
+
+
+
+				# once eveything is done mark current profile selection 
+				# => store active profile somewhere
+				if [ ! -f "$PROGRAM_INSTALLATION_REPORT_FILE" ]; then
+					echo "No installation report found."
+				else
+					update_installation_meta $profile_name
+				fi
+
+				# restart service
+				restart_grahil_service
+			else
+				if [[ "$return_status" -eq 1 ]]; then
+					error=1 && echo $error
+				else
+					lecho_err "An error occurred while clearing preofile. $err_message"
+				fi
+			fi
+		fi	
+	else
+
+		if [[ "$return_status" -eq 1 ]]; then
+			error=1 && echo $error
+		else
+			lecho_err "Program core was not found. Please install the program before attempting to install profiles."
+		fi		
 	fi
 	
 }
+
+
 
 
 
@@ -2510,6 +2689,7 @@ register_updater()
 	sudo crontab -l 2>/dev/null | grep -v "$SCRIPT_PATH -u 1" | sudo crontab -	
 	(sudo crontab -l 2>/dev/null; echo "0 $PROGRAM_UPDATE_CRON_HOUR * * * $SCRIPT_PATH -u 1") | sudo crontab -
 }
+
 
 
 
@@ -3988,7 +4168,10 @@ main()
 
 	if [[ $args_update_mode -eq -1 ]]; then
 
-		if [[ $args_module_request -eq 1 ]]; then
+		if [[ $args_profile_request -eq 1 ]]; then
+			echo "Clearing  profile" 
+			clear_profile
+		elif [[ $args_module_request -eq 1 ]]; then
 			echo "Uninstalling module" 
 			remove_module $args_module_name
 		else
