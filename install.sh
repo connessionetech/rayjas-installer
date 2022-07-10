@@ -2526,13 +2526,25 @@ clear_profile()
 		# identify profile
 		local profile_name=$CURRENT_INSTALLATION_PROFILE
 
-		# download profile
-		local url=$(get_profile_url $profile_name)			
-		if [ -z "$url" ]; then
+
+		if [ -z "$profile_name" ]; then
+
 			error=1
-			err_message="Profile not found/cannot be installed!"
+			err_message="No profile was set!"
+
+		else
+					
+			# download profile
+			local url=$(get_profile_url $profile_name)	
+
+			if [ -z "$url" ]; then
+				error=1
+				err_message="Profile not found/cannot be installed!"
+			fi
+
 		fi
 
+		
 		# ALL OK -> Do Ops		
 		if [[ "$error" -eq 0 ]]; then
 
