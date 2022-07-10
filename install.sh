@@ -3710,7 +3710,7 @@ update_installation_meta()
 	else
 
 		if [ $# -gt 0 ]; then
-			profile_name=$1	
+			local profile_name=$1	
 			CURRENT_INSTALLATION_PROFILE=$profile_name
 			local result=$(<$PROGRAM_INSTALLATION_REPORT_FILE)
 			local tmpfile=$(echo "${PROGRAM_INSTALLATION_REPORT_FILE/.json/.tmp}")
