@@ -93,6 +93,7 @@ virtual_environment_exists=0
 virtual_environment_valid=0
 latest_download_success=0
 service_install_success=0
+module_install_success=0
 
 
 PROGRAM_SUPPORTED_INTERPRETERS=
@@ -2200,11 +2201,12 @@ install_profile()
 				local module_install_error=0
 
 				for module in "${add_modules[@]}"
-				do
-				
-					local install_error=$(install_module $module $DEFAULT_PROGRAM_PATH true 1)
+				do				
+					#local install_error=$(install_module $module $DEFAULT_PROGRAM_PATH true 1)
+					module_install_success=0
+					install_module $module $DEFAULT_PROGRAM_PATH true
 					
-					if [ "$install_error" -eq 1 ]; then					
+					if [ "$module_install_success" -eq 1 ]; then					
 						err_message="Failed to install module $module."
 						module_install_error=1 && error=1
 						break
