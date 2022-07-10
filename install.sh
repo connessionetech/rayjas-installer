@@ -27,6 +27,8 @@ args_requirements_file=
 args_module_name=v
 args_profile_request=
 args_profile_name=
+args_enable_disable_request=
+args_enable_disable=
 
 
 CURRENT_INSTALLATION_PROFILE=
@@ -4826,6 +4828,17 @@ validate_args()
 			lecho_err "Module name must be expected but was not provided." && exit 1
 		fi
 
+		# if enable disable mode is set
+		if [ ! -z ${args_enable_disable+x} ]; then
+
+			if [ "$args_enable_disable" == "true" ] &&  [ "$args_enable_disable" == "false" ]; then
+				$args_enable_disable_request=1
+			else
+				lecho_err "Enable/Disable request is rejected due to incorrect parameter value -> $args_enable_disable." && exit 1
+			fi
+
+		fi
+
 	fi
 
 
@@ -4862,7 +4875,7 @@ usage()
 
 
 # grab any shell arguments
-while getopts 'm:u:irdp:h' o; do
+while getopts 'm:u:p:irde:h' o; do
     case "${o}" in
 		m) 
 			args_module_request=1
@@ -4885,6 +4898,9 @@ while getopts 'm:u:irdp:h' o; do
 		;;
 		d)
 			args_requirements_file="${OPTARG}"
+		;;
+		e)
+			args_enable_disable="${OPTARG}"
 		;;
 		h|*)
 			usage
