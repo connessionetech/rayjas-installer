@@ -1921,6 +1921,8 @@ install_module()
 	local error=0
 	local err_message=
 
+	module_install_success=0
+
 	check_current_installation 1 1
 
 	if [ "$program_exists" -eq 1 ]; then
@@ -2026,6 +2028,9 @@ install_module()
 				fi
 
 			done
+
+			# success
+			module_install_success=1
 
 			if [[ "$return_status" -eq 1 ]]; then
 				error=0 && echo $error
@@ -2198,17 +2203,15 @@ install_profile()
 				local remove_scripts=($(jq -r '.scripts.remove' <<< ${result}  | tr -d '[]," '))
 
 				# install required modules
-				local module_install_error=0
 
 				for module in "${add_modules[@]}"
 				do				
 					#local install_error=$(install_module $module $DEFAULT_PROGRAM_PATH true 1)
-					module_install_success=0
 					install_module $module $DEFAULT_PROGRAM_PATH true
 					
 					if [ "$module_install_success" -eq 1 ]; then					
 						err_message="Failed to install module $module."
-						module_install_error=1 && error=1
+						error=1
 						break
 					fi
 
@@ -2230,7 +2233,7 @@ install_profile()
 
 				# If no module installer error -> continue profile setup
 
-				if [[ "$module_install_error" -eq 0 ]]; then
+				if [[ "$module_install_success" -eq 1 ]]; then
 
 					# remove unwanted modules
 					for module in "${remove_modules[@]}"
