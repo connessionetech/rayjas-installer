@@ -2354,8 +2354,8 @@ install_profile()
 
 						script=${script//$'\n'/} # Remove all newlines.
 
-						local installable_script="$scripts_source_path/$rule.sh" 
-						local target_script="$scripts_install_path/$rule.sh"
+						local installable_script="$scripts_source_path/$script.sh" 
+						local target_script="$scripts_install_path/$script.sh"
 
 						if [ -f "$installable_script" ]; then
 
