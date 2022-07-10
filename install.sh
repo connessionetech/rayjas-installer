@@ -4831,7 +4831,7 @@ validate_args()
 		# if enable disable mode is set
 		if [ ! -z ${args_enable_disable+x} ]; then
 
-			if [ "$args_enable_disable" == "true" ] &&  [ "$args_enable_disable" == "false" ]; then
+			if [ "$args_enable_disable" == "true" ] ||  [ "$args_enable_disable" == "false" ]; then
 				$args_enable_disable_request=1
 			else
 				lecho_err "Enable/Disable request is rejected due to incorrect parameter value -> $args_enable_disable." && exit 1
