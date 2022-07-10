@@ -4171,7 +4171,7 @@ main()
 
 		if [[ $args_profile_request -eq 1 ]]; then
 			echo "Clearing  profile" 
-			clear_profile
+			get_install_info &&	clear_profile
 		elif [[ $args_module_request -eq 1 ]]; then
 			echo "Uninstalling module" 
 			remove_module $args_module_name
