@@ -3753,7 +3753,7 @@ read_installation_meta()
 		INSTALLATION_PYTHON_VERSION="$pythonversion"
 		PYTHON_VIRTUAL_ENV_INTERPRETER=$interpreterpath
 		PYTHON_REQUIREMENTS_FILENAME=$requirements_filename
-		CURRENT_INSTALLATION_PROFILE=profile
+		CURRENT_INSTALLATION_PROFILE="$profile"
 	fi
 }
 
