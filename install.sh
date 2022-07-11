@@ -4277,17 +4277,17 @@ main()
 					prerequisites_python
 				fi
 
-				if [[ $args_enable_disable_request -eq 1 ]]; then
+				#if [[ $args_enable_disable_request -eq 1 ]]; then
 
-					if [ "$args_enable_disable" == "true" ]; then
-						enable_module $args_module_name
-					else
-						disable_module $args_module_name
-					fi					
-				else
-					echo "Installing module $args_module_name" && sleep 2
-					install_module $args_module_name
-				fi			
+				#	if [ "$args_enable_disable" == "true" ]; then
+				#		enable_module $args_module_name
+				#	else
+				#		disable_module $args_module_name
+				#	fi					
+				#else
+				echo "Installing module $args_module_name" && sleep 2
+				install_module $args_module_name
+				#fi			
 
 			else				
 				echo "Installing core" && sleep 2 
@@ -4838,15 +4838,15 @@ validate_args()
 		fi
 
 		# if enable disable mode is set
-		if [ ! -z ${args_enable_disable+x} ]; then
+		#if [ ! -z ${args_enable_disable+x} ]; then
 
-			if [ "$args_enable_disable" == "true" ] ||  [ "$args_enable_disable" == "false" ]; then
-				args_enable_disable_request=1
-			else
-				lecho_err "Enable/Disable request is rejected due to incorrect parameter value -> $args_enable_disable." && exit 1
-			fi
+		#	if [ "$args_enable_disable" == "true" ] ||  [ "$args_enable_disable" == "false" ]; then
+		#		args_enable_disable_request=1
+		#	else
+		#		lecho_err "Enable/Disable request is rejected due to incorrect parameter value -> $args_enable_disable." && exit 1
+		#	fi
 
-		fi
+		#fi
 
 	fi
 
@@ -4908,9 +4908,9 @@ while getopts 'm:u:p:irde:h' o; do
 		d)
 			args_requirements_file="${OPTARG}"
 		;;
-		e)
-			args_enable_disable="${OPTARG}"
-		;;
+		#e)
+		#	args_enable_disable="${OPTARG}"
+		#;;
 		h|*)
 			usage
 			exit 1
