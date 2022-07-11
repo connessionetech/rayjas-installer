@@ -2174,18 +2174,15 @@ remove_module()
 		local name=$(basename -- "$j")
 		local filename="${name%.*}"
 
-		if [[ $name == *$module_name.so ]]; then					
-			# Move tmp file to main location
+		if [[ $name == *"$module_name.so" ]]; then					
 			found=true
 			lecho "Removing module file $j"
 			sudo rm -rf $j
-		elif [[ $name == *$module_name.json ]]; then					
-			# Move tmp file to main location
+		elif [[ $name == *"$module_name.json" ]]; then					
 			found=true
 			lecho "Removing module config $j"
 			sudo rm -rf $j
-		elif [[ $name == *$module_name.py ]]; then					
-			# Move tmp file to main location
+		elif [[ $name == *"$module_name.py" ]]; then					
 			found=true
 			lecho "Removing module file $j"
 			sudo rm -rf $j
