@@ -95,7 +95,7 @@ def_master_configuration_schema = {
 
 
 
-def generate_updated(latest_path:str, update_path:str)->None:
+def generate_updated(latest_path:str, update_path:str, profile_package_path:str)->None:
 
     # Collect list of all new files (json and otherwise)
     logging.info("Collecting list of all json files to be processed")
@@ -118,6 +118,27 @@ def generate_updated(latest_path:str, update_path:str)->None:
                 if not skip:    
                     logging.debug("Collecting config file %s",json_file)
                     latest_json_files.append(json_file)
+    
+
+    # Collect list of applicable files inside profile package
+    logging.info("Collecting list of all profile files to be processed")
+    profile_script_files = []
+    profile_rules_json_files = []
+    profile_module_config_json_files = []
+    for subdir, dirs, files in os.walk(profile_package_path):
+        for file in files:
+            if file.endswith(".sh") or file.endswith(".bat"):
+                script_file = os.path.join(subdir, str(file))
+                profile_script_files.append(script_file)
+            elif file.endswith(".json"):
+                json_file = os.path.join(subdir, str(file))
+
+                if "rules/" in str(json_file):
+                    logging.debug("Collecting profile rule file %s",json_file)
+                    profile_rules_json_files.append(json_file)
+                elif "modules/conf/" in str(json_file)
+                    logging.debug("Collecting config file %s",json_file):
+                    profile_module_config_json_files.append(json_file)
             
 
     # then we overwrite latest files on old files in updated workspace (minus json files)
@@ -166,14 +187,16 @@ def generate_updated(latest_path:str, update_path:str)->None:
 my_parser = argparse.ArgumentParser(description='Merge json configuratrion files')
 my_parser.add_argument('source', metavar='path', type=str, help='Path of source directory (downloaded files workspace)')
 my_parser.add_argument('destination', metavar='path', type=str, help='Path of destination directory (updated files workspace)')
+my_parser.add_argument('profile', metavar='path', type=str, help='Path of profile package directory (extracted profile archive)')
 args = my_parser.parse_args()
 source_path = args.source
 destination_path = args.destination
+profile_package_path = args.profile
 
 try:
     if not os.path.isdir(source_path) or not os.path.isdir(destination_path):
         raise Exception("One or more invalid path(s) specified")
-    generate_updated(source_path, destination_path)
+    generate_updated(source_path, destination_path, profile_package_path)
     logging.info("Merge completed successfully!")
     print("merge ok")
 except Exception as e:
