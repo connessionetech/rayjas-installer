@@ -123,23 +123,17 @@ def generate_updated(latest_path:str, update_path:str, profile_package_path:str)
     # Collect list of applicable files inside profile package
     logging.info("Collecting list of all profile files to be processed")
     profile_script_files = []
-    profile_rules_json_files = []
-    profile_module_config_json_files = []
+    profile_json_files = []
     for subdir, dirs, files in os.walk(profile_package_path):
         for file in files:
             if file.endswith(".sh") or file.endswith(".bat"):
                 script_file = os.path.join(subdir, str(file))
                 profile_script_files.append(script_file)
             elif file.endswith(".json"):
-                json_file = os.path.join(subdir, str(file))
+                json_file = os.path.join(subdir, str(file))                
+                logging.debug("Collecting profile json file %s",json_file)
+                profile_json_files.append(json_file)                
 
-                if "rules/" in str(json_file):
-                    logging.debug("Collecting profile rule file %s",json_file)
-                    profile_rules_json_files.append(json_file)
-                elif "modules/conf/" in str(json_file):
-                    logging.debug("Collecting config file %s",json_file)
-                    profile_module_config_json_files.append(json_file)
-            
 
     # then we overwrite latest files on old files in updated workspace (minus json files)
     logging.info("Copying files from %s into %s", latest_path, update_path)
@@ -181,6 +175,58 @@ def generate_updated(latest_path:str, update_path:str, profile_package_path:str)
 
             with open(old_file_in_update_workspace, "w") as outfile:
                     outfile.write(json.dumps(updated_data))
+    
+    
+    ## check, validate and merge applicable files from profile        
+    logging.info("Preparing to merge profile files")
+
+    ## copy shell scripts from profile into scripts location with overwrite
+    for file in profile_script_files:
+        script_file_in_update_workspace = str(file).replace(profile_package_path, update_path)
+        logging.debug("Copying file %s to %s", file, script_file_in_update_workspace)
+        dest = shutil.copy2(file, script_file_in_update_workspace)
+        if not os.path.exists(script_file_in_update_workspace) or not os.path.isfile(script_file_in_update_workspace):
+            logging.error("File %s was not copied to %s", str(file), str(script_file_in_update_workspace))
+        pass
+
+
+
+    ## copy json files from profile into appropriate location with merge
+    for file in profile_json_files:
+        json_file_in_update_workspace = str(file).replace(profile_package_path, update_path)
+        logging.debug("updating file %s", json_file_in_update_workspace)
+
+        # if config file or rule exists
+        if os.path.exists(json_file_in_update_workspace) and os.path.isfile(json_file_in_update_workspace):
+
+            with open(json_file_in_update_workspace, 'r') as old_json_file:
+                base_data = old_json_file.read()
+                base_obj = json.loads(base_data)
+            
+                with open(file, 'r') as profile_package_json_file:
+                    profile_data = profile_package_json_file.read()
+                    tailored_data_obj = json.loads(profile_data)
+
+                    # if json file is module config
+                    if "conf/" in json_file_in_update_workspace:
+                        validate(base_obj, def_conf_schema)
+                        validate(tailored_data_obj, def_conf_schema)
+                        updated_data = merge(tailored_data_obj, base_obj)
+
+                    # if json file is module config
+                    elif "rules/" in json_file_in_update_workspace:
+                        validate(base_obj, def_rules_schema)
+                        validate(tailored_data_obj, def_rules_schema)
+                        updated_data = merge(tailored_data_obj, base_obj)
+                    
+                    else:
+                        logging.warning("Unsure of how to update this file %s... skipping", str(old_json_file))
+                        continue
+
+                    # update the existing config file
+                    with open(json_file_in_update_workspace, "w") as outfile:
+                            outfile.write(json.dumps(updated_data))
+
 
 
 # Create the parser
