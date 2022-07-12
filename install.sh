@@ -2249,8 +2249,8 @@ install_profile()
 				profile_name=$1 
 			fi
 
-			local url=$(get_profile_url $profile_name)			
-			if [ -z "$url" ]; then
+			local url=$(get_profile_url $profile_name)
+			if [ -z ${url+x} ]; then
 				error=1
 				err_message="Profile not found/cannot be installed!"
 			fi
@@ -2588,7 +2588,7 @@ clear_profile()
 		local profile_name=$CURRENT_INSTALLATION_PROFILE
 
 
-		if [ -z "$profile_name" ]; then
+		if [ -z ${profile_name+x} ]; then
 
 			error=1
 			err_message="No profile was found set for the current installation!"
@@ -2598,7 +2598,7 @@ clear_profile()
 			# download profile
 			local url=$(get_profile_url $profile_name)	
 
-			if [ -z "$url" ]; then
+			if [ -z ${url+x} ]; then
 				error=1
 				err_message="Profile not found/cannot be installed!"
 			fi
@@ -3104,6 +3104,36 @@ update()
 	fi
 
 
+	## check if any profile was active on current installation
+	read_installation_meta
+
+	local profile_dir_path=""
+	local profile_name=$CURRENT_INSTALLATION_PROFILE
+	if [ ! -z ${profile_name+x} ]; then 
+		lecho "profile was found fo rthsi instllation" 
+		local url=$(get_profile_url $profile_name)
+		if [ -z ${url+x} ]; then
+			error=1
+			err_message="Profile not found!. Update will disregard profile"
+			profile_name=""
+		else
+			local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
+			local profile_archive="$tmp_dir/$profile_name.zip"	
+			local profile_package_path="$tmp_dir/$profile_name"
+
+			# extract profile archive to a tmp location
+			sudo wget -O "$profile_archive" "$url"
+			sudo unzip $profile_archive -d $profile_package_path
+
+			local meta_file="$profile_package_path/meta.json"
+			if [ -f "$meta_file" ]; then
+				profile_dir_path=$profile_package_path
+			fi			
+		fi
+		
+	fi
+
+
 	
 	# leave all files that are in old version but not in new version (custom modules and custom rules and custom scripts)
 	# carefully merge old configuration json with new configuration json -> validate jsons	
@@ -3114,7 +3144,7 @@ update()
 	
 	# pass tmp dir paths to merger	
 	sudo chmod +x $MERGE_SCRIPT
-	local merge_result=$(sudo $EXECUTABLE_PYTHON $MERGE_SCRIPT $temp_dir_for_latest $temp_dir_for_updated)
+	local merge_result=$(sudo $EXECUTABLE_PYTHON $MERGE_SCRIPT $temp_dir_for_latest $temp_dir_for_updated $profile_dir_path)
 	if [[ $merge_result != *"merge ok"* ]]; then
 		lecho "Merging failed. Update will now exit!"
 		exit 1
