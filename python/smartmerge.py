@@ -196,8 +196,20 @@ def generate_updated(latest_path:str, update_path:str, profile_package_path:str)
         json_file_in_update_workspace = str(file).replace(profile_package_path, update_path)
         logging.debug("updating file %s", json_file_in_update_workspace)
 
-        # if config file or rule exists
-        if os.path.exists(json_file_in_update_workspace) and os.path.isfile(json_file_in_update_workspace):
+
+        # if json file is a rule that does not exist in current installation (custom profile rule)
+        if "rules/" in json_file_in_update_workspace:
+            if not os.path.exists(json_file_in_update_workspace) or not os.path.isfile(json_file_in_update_workspace):
+                dest = shutil.copy2(file, json_file_in_update_workspace)
+                if not os.path.exists(json_file_in_update_workspace) or not os.path.isfile(script_file_in_update_workspace):
+                    logging.error("File %s was not copied to %s", str(file), str(json_file_in_update_workspace))
+                
+                continue
+
+
+
+        # if config file or rule exists we will update it
+        if  os.path.exists(json_file_in_update_workspace) and os.path.isfile(json_file_in_update_workspace):
 
             with open(json_file_in_update_workspace, 'r') as old_json_file:
                 base_data = old_json_file.read()
