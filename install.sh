@@ -4245,6 +4245,7 @@ detect_system()
 	fi
 
 	write_log "OS TYPE $OS_TYPE"
+	sudo chown -R $USER: $LOG_FILE
 }
 
 
