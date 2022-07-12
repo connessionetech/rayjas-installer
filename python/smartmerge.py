@@ -136,8 +136,8 @@ def generate_updated(latest_path:str, update_path:str, profile_package_path:str)
                 if "rules/" in str(json_file):
                     logging.debug("Collecting profile rule file %s",json_file)
                     profile_rules_json_files.append(json_file)
-                elif "modules/conf/" in str(json_file)
-                    logging.debug("Collecting config file %s",json_file):
+                elif "modules/conf/" in str(json_file):
+                    logging.debug("Collecting config file %s",json_file)
                     profile_module_config_json_files.append(json_file)
             
 
