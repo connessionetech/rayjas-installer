@@ -3051,7 +3051,7 @@ update()
 	local module_conf_dir2="$temp_dir_for_latest/oneadmin/modules/conf"
 	for i in $(find $module_conf_dir2 -type f -print)
 	do
-		if [[ $i == *.json ]]; then
+		if [[ $i == *".json" ]]; then
 			local filename=$(basename -- "$i")
 			local extension="${filename##*.}"
 			local filename="${filename%.*}"
@@ -3065,7 +3065,7 @@ update()
 	local module_conf_dir="$DEFAULT_PROGRAM_PATH/oneadmin/modules/conf"
 	for i in $(find $module_conf_dir -type f -print)
 	do
-		if [[ $i == *.json ]]; then
+		if [[ $i == *".json" ]]; then
 			local filename=$(basename -- "$i")
 			local extension="${filename##*.}"
 			local filename="${filename%.*}"
@@ -3074,19 +3074,7 @@ update()
 	done
 
 
-	# >>> Install updates for existing modules as well <<<
-	lecho "Installing addon modules for latest build"
-	local base_dir=$temp_dir_for_latest
-	for i in "${existing_modules[@]}"
-	do
-	: 		
-		if [[ ! " ${new_modules[*]} " == *" $i "* ]]; then
-			sleep 1
-			lecho "Module $i was not found in latest core build. attempting to install as an addon.."
-			install_module $i $temp_dir_for_latest true # force install module into latest build download
-		fi
-	done
-
+	
 
 	# copy current to tmp workspace
 	sudo cp -a $DEFAULT_PROGRAM_PATH/. $temp_dir_for_existing/
@@ -3105,12 +3093,13 @@ update()
 
 
 	## check if any profile was active on current installation
+	local has_profile=0
 	read_installation_meta
 
 	local profile_dir_path=""
 	local profile_name=$CURRENT_INSTALLATION_PROFILE
 	if [ ! -z ${profile_name+x} ]; then 
-		lecho "profile was found fo rthsi instllation" 
+		lecho "profile was found for this instllation" 
 		local url=$(get_profile_url $profile_name)
 		if [ -z ${url+x} ]; then
 			error=1
@@ -3128,10 +3117,27 @@ update()
 			local meta_file="$profile_package_path/meta.json"
 			if [ -f "$meta_file" ]; then
 				profile_dir_path=$profile_package_path
+				has_profile=1
 			fi			
 		fi
 		
 	fi
+
+
+
+	# >>> Install updates for existing modules <<<
+	lecho "Installing addon modules for latest build"
+	local base_dir=$temp_dir_for_latest
+	for i in "${existing_modules[@]}"
+	do
+	: 		
+		if [[ ! " ${new_modules[*]} " == *" $i "* ]]; then
+			sleep 1
+			lecho "Module $i was not found in latest core build. attempting to install as an addon.."
+			install_module $i $temp_dir_for_latest true # force install module into latest build download
+		fi
+	done
+
 
 
 	
@@ -3190,9 +3196,10 @@ update()
 		if [ -f "$ERROR_LOG_FILE" ]; then
 			local error_status=$(grep ERROR $ERROR_LOG_FILE)
 			if [ ! -z "$error_status" ]; then 
-				lecho "Program seems to have startup errors. Update needs to be reverted"		
-				lecho "Update failed!"
-				rollback_update $temp_dir_for_existing
+				lecho_err "Program seems to have startup errors. Update needs to be reverted"		
+				lecho_err "Update has failed!"
+				lecho "Start rollback!"
+				#rollback_update $temp_dir_for_existing
 			fi
 		
 		else
