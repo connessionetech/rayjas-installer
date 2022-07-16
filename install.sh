@@ -1652,11 +1652,12 @@ unpack_runtime_libraries()
 
 			sudo unzip $i -d $dest/
 
-			for j in $(find $dest -type f -print)
-			do				
+			for j in "$dest"/*; do
+
 				local soname=$(basename -- "$j")				
 				if [[ "$soname" == *"$current_python.so" ]]; then					
 					# Move tmp file to main location
+					echo "soname=$soname"
 					lecho "Moving runtime file $j to $deploy_path"
 					sudo mv $j $deploy_path
 				fi
