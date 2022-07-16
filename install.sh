@@ -1638,6 +1638,8 @@ unpack_runtime_libraries()
 	local runtime_base_dir="$DEFAULT_PROGRAM_PATH/runtime/$PLATFORM_ARCH"
 	local deploy_base_dir=$DEFAULT_PROGRAM_PATH
 
+	echo "current_python=$current_python"
+
 	for i in $(find $runtime_base_dir -type f -print)	
 	do
 
