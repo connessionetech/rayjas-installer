@@ -3097,11 +3097,12 @@ update()
 	read_installation_meta
 
 	local profile_dir_path=""
+
 	local profile_name=$CURRENT_INSTALLATION_PROFILE
-	if [ ! -z ${profile_name+x} ]; then 
-		lecho "profile was found for this instllation" 
+	if [ ! -z "${profile_name}" ]; then 
+		lecho "profile was found for this installation" 
 		local url=$(get_profile_url $profile_name)
-		if [ -z ${url+x} ]; then
+		if [ -z "${url}" ]; then
 			error=1
 			err_message="Profile not found!. Update will disregard profile"
 			profile_name=""
