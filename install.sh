@@ -3104,7 +3104,7 @@ update()
 		local url=$(get_profile_url $profile_name)
 		if [ -z "${url}" ]; then
 			error=1
-			err_message="Profile not found!. Update will disregard profile"
+			err_message="Profile url not found!. Update will disregard profile"
 			profile_name=""
 		else
 			local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
