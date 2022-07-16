@@ -1638,9 +1638,10 @@ unpack_runtime_libraries()
 	local runtime_base_dir="$DEFAULT_PROGRAM_PATH/runtime/$PLATFORM_ARCH"
 	local deploy_base_dir=$DEFAULT_PROGRAM_PATH
 
-	for i in $(find $runtime_base_dir -type f -print)
-	do
-		if [[ $i == *.zip ]]; then
+	#for i in $(find $runtime_base_dir -type f -print)
+	for j in "$runtime_base_dir"/*; do
+
+		if [[ $i == *".zip" ]]; then
 
 			local filename=$(basename -- "$i")
 			local extension="${filename##*.}"
