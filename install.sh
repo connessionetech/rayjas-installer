@@ -1639,7 +1639,10 @@ unpack_runtime_libraries()
 	local deploy_base_dir=$DEFAULT_PROGRAM_PATH
 
 	#for i in $(find $runtime_base_dir -type f -print)
-	for j in "$runtime_base_dir"/*; do
+	for j in "$runtime_base_dir"/*; 
+	do
+
+		echo $i
 
 		if [[ $i == *".zip" ]]; then
 
