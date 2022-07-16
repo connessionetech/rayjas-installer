@@ -3179,6 +3179,7 @@ update()
 		lecho "Unpacking runtime files. Warning old runtime files will be overwritten!"
 
 		# Unpack runtime so files
+		echo $PYTHON_VERSION && exit
 		unpack_runtime_libraries
 	fi	
 
