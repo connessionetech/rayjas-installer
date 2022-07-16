@@ -1638,14 +1638,9 @@ unpack_runtime_libraries()
 	local runtime_base_dir="$DEFAULT_PROGRAM_PATH/runtime/$PLATFORM_ARCH"
 	local deploy_base_dir=$DEFAULT_PROGRAM_PATH
 
-	echo "current_python=$current_python"
-
 	for i in $(find $runtime_base_dir -type f -print)	
 	do
-
-		echo $i
-		continue
-
+		
 		if [[ $i == *".zip" ]]; then
 
 			local filename=$(basename -- "$i")
@@ -1659,8 +1654,8 @@ unpack_runtime_libraries()
 
 			for j in $(find $dest -type f -print)
 			do				
-				local soname=$(basename -- "$j")
-				if [[ $soname == *$current_python.so ]]; then					
+				local soname=$(basename -- "$j")				
+				if [[ "$soname" == *"$current_python.so" ]]; then					
 					# Move tmp file to main location
 					lecho "Moving runtime file $j to $deploy_path"
 					sudo mv $j $deploy_path
