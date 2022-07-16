@@ -3153,7 +3153,7 @@ update()
 	
 	# pass tmp dir paths to merger	
 	sudo chmod +x $MERGE_SCRIPT
-	local merge_result=$(sudo $EXECUTABLE_PYTHON $MERGE_SCRIPT $temp_dir_for_latest $temp_dir_for_updated $profile_dir_path)
+	local merge_result=$(sudo $EXECUTABLE_PYTHON $MERGE_SCRIPT "$temp_dir_for_latest" "$temp_dir_for_updated" "$profile_dir_path")
 	if [[ $merge_result != *"merge ok"* ]]; then
 		lecho "Merging failed. Update will now exit!"
 		exit 1

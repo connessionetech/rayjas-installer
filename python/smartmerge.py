@@ -245,7 +245,7 @@ def generate_updated(latest_path:str, update_path:str, profile_package_path:str)
 my_parser = argparse.ArgumentParser(description='Merge json configuratrion files')
 my_parser.add_argument('source', metavar='path', type=str, help='Path of source directory (downloaded files workspace)')
 my_parser.add_argument('destination', metavar='path', type=str, help='Path of destination directory (updated files workspace)')
-my_parser.add_argument('profile', metavar='path', type=str, help='Path of profile package directory (extracted profile archive)')
+my_parser.add_argument('profile', metavar='profile', type=str, help='Path of profile package directory (extracted profile archive)')
 args = my_parser.parse_args()
 source_path = args.source
 destination_path = args.destination
