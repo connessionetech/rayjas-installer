@@ -3121,7 +3121,9 @@ update()
 				has_profile=1
 			fi			
 		fi
-		
+	
+	else
+		lecho "No profile found for this installation" 	
 	fi
 
 
