@@ -1648,7 +1648,9 @@ unpack_runtime_libraries()
 			local filename="${filename%.*}"
 			local dest=$tmp_dir/$filename			
 			local deploy_file=$(echo $i | sed "s#.zip#.so#g")
+			local possible_conflict_file=$(echo $i | sed "s#.zip#.py#g")
 			local deploy_path=$(echo $deploy_file | sed "s#$runtime_base_dir#$deploy_base_dir#g")
+			local possible_conflict_file_path=$(echo $possible_conflict_file | sed "s#$runtime_base_dir#$deploy_base_dir#g")
 
 			sudo unzip $i -d $dest/
 
@@ -1659,6 +1661,12 @@ unpack_runtime_libraries()
 					# Move tmp file to main location
 					lecho "Moving runtime file $j to $deploy_path"
 					sudo mv $j $deploy_path
+
+					# when placing so files remove any py files
+					if [ -f "$possible_conflict_file_path" ]; then
+						lecho "Removing conflicting file $possible_conflict_file_path"
+						sudo rm $possible_conflict_file_path
+					fi
 				fi
 			done
 		fi
