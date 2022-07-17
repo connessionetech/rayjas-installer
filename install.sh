@@ -1528,6 +1528,10 @@ install_python_program_dependencies()
 	fi
 	
 	pip3 install -r "$REQUIREMENTS_FILE"
+
+	sleep 2
+
+	pip3 install -r "$REQUIREMENTS_FILE"
 }
 
 
