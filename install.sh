@@ -1530,7 +1530,8 @@ install_python_program_dependencies()
 	pip3 install -r "$REQUIREMENTS_FILE"	
 
 	# Brute force hack for exception after first time dependencies install
-	if is_first_time_install; then
+	# activates when atleast one param is passed to this function
+	if [ $# -gt 0 ]; then
 		sleep 2
 		pip3 install -r "$REQUIREMENTS_FILE"
 	fi	
@@ -3966,7 +3967,7 @@ post_download_install()
 
 		if [[ $virtual_environment_valid -eq 1 ]]; then	
 			
-			install_python_program_dependencies
+			install_python_program_dependencies 1
 
 			deactivate_virtual_environment
 
