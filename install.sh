@@ -1527,11 +1527,14 @@ install_python_program_dependencies()
 		REQUIREMENTS_FILE="$DEFAULT_PROGRAM_PATH/requirements/$SPECIFIED_REQUIREMENTS_FILE"
 	fi
 	
-	pip3 install -r "$REQUIREMENTS_FILE"
+	pip3 install -r "$REQUIREMENTS_FILE"	
 
-	sleep 2
-
-	pip3 install -r "$REQUIREMENTS_FILE"
+	# Brute force hack for exception after first time dependencies install
+	if is_first_time_install; then
+		sleep 2
+		pip3 install -r "$REQUIREMENTS_FILE"
+	fi	
+	
 }
 
 
