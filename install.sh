@@ -1542,6 +1542,74 @@ install_python_program_dependencies()
 
 
 #############################################
+# Install dependencies in virtual environment
+# from the specified requirements file
+# 
+# GLOBALS:
+#		RASPBERRY_PI, REQUIREMENTS_FILE, DEFAULT_PROGRAM_PATH,
+#		PYTHON_RPI_REQUIREMENTS_FILENAME, PYTHON_REQUIREMENTS_FILENAME,
+#		SPECIFIED_REQUIREMENTS_FILE
+# ARGUMENTS:
+#			$1 = requirement file path - String#
+#			$2 = Whether to operate in silent mode or verbose mode - Boolean
+#
+# RETURN:
+#		
+#############################################
+install_module_dependencies()
+{
+	local error=0
+	local err_message=
+	local silent_mode=0
+	local requirements_file=
+	
+	if [ $# -lt 1 ]; then
+			error=1
+			err_message="Minimum of 1 parameter is required!"
+	else	
+			if [ $# -gt 1 ]; then
+				requirements_file=$1				
+				silent_mode=$2
+			else
+				requirements_file=$1				
+			fi
+
+
+			local requirements_file=$1
+			VENV_FOLDER="$PYTHON_VIRTUAL_ENV_LOCATION/$PROGRAM_FOLDER_NAME"	
+
+			if [ ! -d "$VENV_FOLDER" ] || [ ! -f "$VENV_FOLDER/bin/activate" ]; then
+				error=1
+				err_message="Virtual environment is invalid or was not found"
+			fi
+		
+	fi
+
+
+	if [[ "$error" -eq 0 ]]; then
+		#pip3 install -r "$REQUIREMENTS_FILE"
+		local pip="$VENV_FOLDER/bin/pip3"
+
+		if [[ "$silent_mode" -eq 0 ]]; then
+			$pip install -r $requirements_file
+			lecho "Module dependencies installed."
+		else
+			local result=$("$pip" install -r "$requirements_file")
+		fi
+
+	else
+
+		if [[ "$silent_mode" -eq 0 ]]; then
+			lecho_err "An error occurred. $err_message"
+		fi
+	fi	
+		
+}
+
+
+
+
+#############################################
 # Deactivates previously activated virtual 
 # environment.
 # 
@@ -2083,9 +2151,21 @@ install_module()
 			local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
 			local module="$tmp_dir/$module_name.zip"	
 			local dest="$tmp_dir/$module_name"
+			local module_requirements_file="$dest/requirements.txt"
 
 			sudo wget -O "$module" "$url"
 			sudo unzip $module -d "$dest"
+
+
+			if [ -f "$module_requirements_file" ]; then
+				# Install dependencies
+				if [[ "$silent_mode" -eq 0 ]]; then
+					lecho "Requirements file found!. Installing dependencies from file $j"						
+				fi
+
+				install_module_dependencies $module_requirements_file
+			fi
+			
 
 			for j in "$dest"/*; do
 
@@ -2123,7 +2203,7 @@ install_module()
 					# so and py versions of same module are mutually exclusive
 					if [ -f "$deploy_path/$filename.so" ]; then
 						sudo rm "$deploy_path/$module_name.so"
-					fi			
+					fi
 				fi
 
 			done
