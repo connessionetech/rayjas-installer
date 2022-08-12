@@ -1542,6 +1542,86 @@ install_python_program_dependencies()
 
 
 #############################################
+# Install dependencies in virtual environment
+# from the specified requirements file
+# 
+# GLOBALS:
+#		RASPBERRY_PI, REQUIREMENTS_FILE, DEFAULT_PROGRAM_PATH,
+#		PYTHON_RPI_REQUIREMENTS_FILENAME, PYTHON_REQUIREMENTS_FILENAME,
+#		SPECIFIED_REQUIREMENTS_FILE
+# ARGUMENTS:
+#			$1 = requirement file path - String#
+#			$2 = Whether to return a value or not - Boolean
+#			$3 = Whether to operate in silent mode or verbose mode - Boolean
+#
+# RETURN:
+#		
+#############################################
+install_module_dependencies()
+{
+	local return_status=0
+	local error=0
+	local err_message=
+	local silent_mode=0
+	local requirements_file=
+	
+	if [ $# -lt 1 ]; then
+			error=1
+			err_message="Minimum of 1 parameter is required!"
+	else	
+
+			if [ $# -gt 2 ]; then
+				requirements_file=$1				
+				return_status=$2
+				silent_mode=$3
+			elif [ $# -gt 1 ]; then
+				requirements_file=$1				
+				return_status=$2
+			fi
+
+
+			local requirements_file=$1
+			VENV_FOLDER="$PYTHON_VIRTUAL_ENV_LOCATION/$PROGRAM_FOLDER_NAME"	
+
+			if [ ! -d "$VENV_FOLDER" ] || [ ! -f "$VENV_FOLDER/bin/activate" ]; then
+				error=1
+				err_message="Virtual environment is invalid or was not found"
+			fi
+		
+	fi
+
+
+	if [[ "$error" -eq 0 ]]; then
+		#pip3 install -r "$REQUIREMENTS_FILE"
+		local pip="$VENV_FOLDER/bin/pip3"
+
+		if [[ "$silent_mode" -eq 0 ]]; then
+			$pip install -r $requirements_file
+			lecho "Module dependencies installed."
+		else
+			local result=$("$pip" install -r "$requirements_file")
+		fi
+
+		if [[ "$return_status" -eq 1 ]]; then
+			echo $error			
+		fi
+	else
+
+		if [[ "$silent_mode" -eq 0 ]]; then
+			lecho_err "An error occurred. $err_message"
+		fi
+
+		if [[ "$return_status" -eq 1 ]]; then
+			error=1 && echo $error			
+		fi	
+	fi	
+		
+}
+
+
+
+
+#############################################
 # Deactivates previously activated virtual 
 # environment.
 # 
@@ -2123,7 +2203,14 @@ install_module()
 					# so and py versions of same module are mutually exclusive
 					if [ -f "$deploy_path/$filename.so" ]; then
 						sudo rm "$deploy_path/$module_name.so"
-					fi			
+					fi
+				elif [[ $name == *"requirements.txt" ]]; then					
+					# Install dependencies
+					if [[ "$silent_mode" -eq 0 ]]; then
+						lecho "Requirements file found!. Installing dependencies from file $j"						
+					fi
+
+					install_module_dependencies $j
 				fi
 
 			done
