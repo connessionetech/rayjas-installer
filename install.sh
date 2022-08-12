@@ -2163,7 +2163,7 @@ install_module()
 					lecho "Requirements file found!. Installing dependencies from file $j"						
 				fi
 
-				install_module_dependencies $j
+				install_module_dependencies $module_requirements_file
 			fi
 			
 
