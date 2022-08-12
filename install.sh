@@ -1551,15 +1551,13 @@ install_python_program_dependencies()
 #		SPECIFIED_REQUIREMENTS_FILE
 # ARGUMENTS:
 #			$1 = requirement file path - String#
-#			$2 = Whether to return a value or not - Boolean
-#			$3 = Whether to operate in silent mode or verbose mode - Boolean
+#			$2 = Whether to operate in silent mode or verbose mode - Boolean
 #
 # RETURN:
 #		
 #############################################
 install_module_dependencies()
 {
-	local return_status=0
 	local error=0
 	local err_message=
 	local silent_mode=0
@@ -1569,14 +1567,11 @@ install_module_dependencies()
 			error=1
 			err_message="Minimum of 1 parameter is required!"
 	else	
-
-			if [ $# -gt 2 ]; then
+			if [ $# -gt 1 ]; then
 				requirements_file=$1				
-				return_status=$2
-				silent_mode=$3
-			elif [ $# -gt 1 ]; then
+				silent_mode=$2
+			else
 				requirements_file=$1				
-				return_status=$2
 			fi
 
 
@@ -1602,18 +1597,11 @@ install_module_dependencies()
 			local result=$("$pip" install -r "$requirements_file")
 		fi
 
-		if [[ "$return_status" -eq 1 ]]; then
-			echo $error			
-		fi
 	else
 
 		if [[ "$silent_mode" -eq 0 ]]; then
 			lecho_err "An error occurred. $err_message"
 		fi
-
-		if [[ "$return_status" -eq 1 ]]; then
-			error=1 && echo $error			
-		fi	
 	fi	
 		
 }
