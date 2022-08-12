@@ -2151,9 +2151,21 @@ install_module()
 			local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
 			local module="$tmp_dir/$module_name.zip"	
 			local dest="$tmp_dir/$module_name"
+			local module_requirements_file="$dest/requirements.txt"
 
 			sudo wget -O "$module" "$url"
 			sudo unzip $module -d "$dest"
+
+
+			if [ -f "$module_requirements_file" ]; then
+				# Install dependencies
+				if [[ "$silent_mode" -eq 0 ]]; then
+					lecho "Requirements file found!. Installing dependencies from file $j"						
+				fi
+
+				install_module_dependencies $j
+			fi
+			
 
 			for j in "$dest"/*; do
 
@@ -2192,13 +2204,6 @@ install_module()
 					if [ -f "$deploy_path/$filename.so" ]; then
 						sudo rm "$deploy_path/$module_name.so"
 					fi
-				elif [[ $name == "requirements.txt" ]]; then					
-					# Install dependencies
-					if [[ "$silent_mode" -eq 0 ]]; then
-						lecho "Requirements file found!. Installing dependencies from file $j"						
-					fi
-
-					install_module_dependencies $j
 				fi
 
 			done
