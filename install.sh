@@ -2192,7 +2192,7 @@ install_module()
 					if [ -f "$deploy_path/$filename.so" ]; then
 						sudo rm "$deploy_path/$module_name.so"
 					fi
-				elif [[ $name == *"requirements.txt" ]]; then					
+				elif [[ $name == "requirements.txt" ]]; then					
 					# Install dependencies
 					if [[ "$silent_mode" -eq 0 ]]; then
 						lecho "Requirements file found!. Installing dependencies from file $j"						
