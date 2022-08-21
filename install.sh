@@ -25,8 +25,13 @@ args_update_mode=
 args_install_request=
 args_requirements_file=
 args_module_name=v
+args_profile_request=
+args_profile_name=
+args_enable_disable_request=
+args_enable_disable=
 
 
+CURRENT_INSTALLATION_PROFILE=
 
 CONFIGURATION_FILE=conf.ini
 
@@ -90,6 +95,7 @@ virtual_environment_exists=0
 virtual_environment_valid=0
 latest_download_success=0
 service_install_success=0
+module_install_success=0
 
 
 PROGRAM_SUPPORTED_INTERPRETERS=
@@ -1405,20 +1411,21 @@ check_create_virtual_environment()
 
 	if [ ! -d "$PYTHON_VIRTUAL_ENV_LOCATION" ]; then	
 		mkdir -p "$PYTHON_VIRTUAL_ENV_LOCATION"
-		sudo chown -R $USER: "$PYTHON_VIRTUAL_ENV_LOCATION"
+		sudo chown -R $USER: $PYTHON_VIRTUAL_ENV_LOCATION
 	fi	
 
 	python=$(which python$PYTHON_VERSION)
 	pipver=$(which pip3)
 
-	$python -m pip install --upgrade pip	
-	$pipver install --upgrade setuptools wheel
+	$python -m pip install --upgrade pip
+	$pipver install --upgrade setuptools wheel	
 	
 
 	if [ ! -d "$VENV_FOLDER" ]; then
 
 		echo "Creating virtual environment @ $VENV_FOLDER"
-		"$python" -m venv "$VENV_FOLDER"
+		$python -m venv $VENV_FOLDER
+		sudo chown -R $USER: $VENV_FOLDER
 
 		if [ -f "$VENV_FOLDER/bin/activate" ]; then
 			lecho "Virtual environment created successfully"
@@ -1520,7 +1527,83 @@ install_python_program_dependencies()
 		REQUIREMENTS_FILE="$DEFAULT_PROGRAM_PATH/requirements/$SPECIFIED_REQUIREMENTS_FILE"
 	fi
 	
-	pip3 install -r "$REQUIREMENTS_FILE"
+	pip3 install -r "$REQUIREMENTS_FILE"	
+
+	# Brute force hack for exception after first time dependencies install
+	# activates when atleast one param is passed to this function
+	if [ $# -gt 0 ]; then
+		sleep 2
+		pip3 install -r "$REQUIREMENTS_FILE"
+	fi	
+	
+}
+
+
+
+
+#############################################
+# Install dependencies in virtual environment
+# from the specified requirements file
+# 
+# GLOBALS:
+#		RASPBERRY_PI, REQUIREMENTS_FILE, DEFAULT_PROGRAM_PATH,
+#		PYTHON_RPI_REQUIREMENTS_FILENAME, PYTHON_REQUIREMENTS_FILENAME,
+#		SPECIFIED_REQUIREMENTS_FILE
+# ARGUMENTS:
+#			$1 = requirement file path - String#
+#			$2 = Whether to operate in silent mode or verbose mode - Boolean
+#
+# RETURN:
+#		
+#############################################
+install_module_dependencies()
+{
+	local error=0
+	local err_message=
+	local silent_mode=0
+	local requirements_file=
+	
+	if [ $# -lt 1 ]; then
+			error=1
+			err_message="Minimum of 1 parameter is required!"
+	else	
+			if [ $# -gt 1 ]; then
+				requirements_file=$1				
+				silent_mode=$2
+			else
+				requirements_file=$1				
+			fi
+
+
+			local requirements_file=$1
+			VENV_FOLDER="$PYTHON_VIRTUAL_ENV_LOCATION/$PROGRAM_FOLDER_NAME"	
+
+			if [ ! -d "$VENV_FOLDER" ] || [ ! -f "$VENV_FOLDER/bin/activate" ]; then
+				error=1
+				err_message="Virtual environment is invalid or was not found"
+			fi
+		
+	fi
+
+
+	if [[ "$error" -eq 0 ]]; then
+		#pip3 install -r "$REQUIREMENTS_FILE"
+		local pip="$VENV_FOLDER/bin/pip3"
+
+		if [[ "$silent_mode" -eq 0 ]]; then
+			$pip install -r $requirements_file
+			lecho "Module dependencies installed."
+		else
+			local result=$("$pip" install -r "$requirements_file")
+		fi
+
+	else
+
+		if [[ "$silent_mode" -eq 0 ]]; then
+			lecho_err "An error occurred. $err_message"
+		fi
+	fi	
+		
 }
 
 
@@ -1584,6 +1667,7 @@ install_from_url()
 			lecho "Moving files to program location $DEFAULT_PROGRAM_PATH"
 			sudo cp -R "$TMP_DIR"/. "$DEFAULT_PROGRAM_PATH/"	
 			sudo chown -R $USER: "$DEFAULT_PROGRAM_PATH"
+			sudo chmod a+rwx "$DEFAULT_PROGRAM_PATH"
 			if [ -f "$DEFAULT_PROGRAM_PATH/$PYTHON_MAIN_FILE" ]; then	
 				# Copying successful 
 				lecho "files copied to program path"
@@ -1625,31 +1709,40 @@ install_from_url()
 #############################################
 unpack_runtime_libraries()
 {
-	local current_python="38"
+	local current_python="${PYTHON_VERSION//./}"
 	local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
 	local runtime_base_dir="$DEFAULT_PROGRAM_PATH/runtime/$PLATFORM_ARCH"
 	local deploy_base_dir=$DEFAULT_PROGRAM_PATH
 
-	for i in $(find $runtime_base_dir -type f -print)
+	for i in $(find $runtime_base_dir -type f -print)	
 	do
-		if [[ $i == *.zip ]]; then
+		
+		if [[ $i == *".zip" ]]; then
 
 			local filename=$(basename -- "$i")
 			local extension="${filename##*.}"
 			local filename="${filename%.*}"
 			local dest=$tmp_dir/$filename			
 			local deploy_file=$(echo $i | sed "s#.zip#.so#g")
+			local possible_conflict_file=$(echo $i | sed "s#.zip#.py#g")
 			local deploy_path=$(echo $deploy_file | sed "s#$runtime_base_dir#$deploy_base_dir#g")
+			local possible_conflict_file_path=$(echo $possible_conflict_file | sed "s#$runtime_base_dir#$deploy_base_dir#g")
 
 			sudo unzip $i -d $dest/
 
-			for j in $(find $dest -type f -print)
-			do				
-				local soname=$(basename -- "$j")
-				if [[ $soname == *$current_python.so ]]; then					
+			for j in "$dest"/*; do
+
+				local soname=$(basename -- "$j")				
+				if [[ "$soname" == *"$current_python.so" ]]; then					
 					# Move tmp file to main location
 					lecho "Moving runtime file $j to $deploy_path"
 					sudo mv $j $deploy_path
+
+					# when placing so files remove any py files
+					if [ -f "$possible_conflict_file_path" ]; then
+						lecho "Removing conflicting file $possible_conflict_file_path"
+						sudo rm $possible_conflict_file_path
+					fi
 				fi
 			done
 		fi
@@ -1766,8 +1859,41 @@ get_module_url()
 {
 	local module_name="$1.zip"
 	local url=$PROGRAM_ARCHIVE_LOCATION
-	url=$(echo "$url" | sed "s/core/modules/")
-	url=$(echo "$url" | sed "s/grahil.zip/$module_name/")
+	url=${url/core/modules}
+	url=${url/grahil.zip/$module_name}
+	if http_file_exists $url; then
+		echo $url
+	else
+		local NULL
+		echo $NULL
+	fi
+}
+
+
+
+
+#############################################
+# Returns profile package download url (if exists), 
+# using the main program package url and profile name.
+# empty variable/unset variable is returned if profile
+# does not exist (owing to incorrect name)
+# This method does not check if url exists or not
+# 
+# GLOBALS:
+#		PROGRAM_ARCHIVE_LOCATION#
+# ARGUMENTS:
+#		$1 : profile name
+# RETURN:
+#		profile download url (if exists). Else
+# empty variable/unset variable is returned
+#############################################
+get_profile_url()
+{
+	local profile_name="$1.zip"
+	local url=$PROGRAM_ARCHIVE_LOCATION
+	url=$(echo "$url" | sed "s/core/profiles/")
+	url=$(echo "$url" | sed "s/grahil.zip/$profile_name/")
+	url=$(echo "$url" | sed "s#$PLATFORM_ARCH/##")	
 
 	if http_file_exists $url; then
 		echo $url
@@ -1776,6 +1902,7 @@ get_module_url()
 		echo $NULL
 	fi
 }
+
 
 
 
@@ -1818,7 +1945,10 @@ enable_module()
 	local module_conf_path="$DEFAULT_PROGRAM_PATH/modules/conf/$module_name.json"
 
 	if [ -f "$module_conf_path" ]; then
-		echo "$(jq '.enabled = "true"' $module_conf_path)" > $module_conf_path
+		# enable required modules
+		local tmpfile=$(echo "${module_conf_path/.json/.tmp}")
+		sudo echo "$( jq '.enabled = "true"' $module_conf_path )" > $tmpfile
+		sudo mv $tmpfile $module_conf_path
 	else
 		echo "Module config for '$module_name' not found!"
 	fi
@@ -1843,9 +1973,68 @@ disable_module()
 	local module_conf_path="$DEFAULT_PROGRAM_PATH/modules/conf/$module_name.json"
 	
 	if [ -f "$module_conf_path" ]; then
-		echo "$(jq '.enabled = "false"' $module_conf_path)" > $module_conf_path
+		local tmpfile=$(echo "${module_conf_path/.json/.tmp}")
+		sudo echo "$( jq '.enabled = "false"' $module_conf_path )" > $tmpfile
+		sudo mv $tmpfile $module_conf_path
 	else
 		echo "Module config for '$module_name' not found!"
+	fi
+}
+
+
+
+
+#############################################
+# Enable a grahil reaction rule
+# 
+# GLOBALS:
+#		
+# ARGUMENTS:
+#		$1: Rule name
+# RETURN:
+#		
+#############################################
+enable_reaction_rule()
+{
+	local rule_name=$1
+	local rule_path="$DEFAULT_PROGRAM_PATH/rules/$rule_name.json"
+
+	if [ -f "$rule_path" ]; then
+		# enable required modules
+		local tmpfile=$(echo "${rule_path/.json/.tmp}")
+		sudo echo "$( jq '.enabled = "true"' $rule_path )" > $tmpfile
+		sudo mv $tmpfile $rule_path
+	else
+		echo "Rule by name '$rule_name' not found!"
+	fi
+}
+
+
+
+
+
+#############################################
+# Disable a grahil reaction rule
+# 
+# GLOBALS:
+#		
+# ARGUMENTS:
+#		$1: Rule name
+# RETURN:
+#		
+#############################################
+disable_reaction_rule()
+{
+	local rule_name=$1
+	local rule_path="$DEFAULT_PROGRAM_PATH/rules/$rule_name.json"
+
+	if [ -f "$rule_path" ]; then
+		# enable required modules
+		local tmpfile=$(echo "${rule_path/.json/.tmp}")
+		sudo echo "$( jq '.enabled = "false"' $rule_path )" > $tmpfile
+		sudo mv $tmpfile $rule_path
+	else
+		echo "Rule by name '$rule_name' not found!"
 	fi
 }
 
@@ -1877,102 +2066,182 @@ install_module()
 	local module_name=
 	local base_dir=$DEFAULT_PROGRAM_PATH	
 	local force=false
+	local return_status=0
+	local error=0
+	local err_message=
+	local silent_mode=0
 
-	check_current_installation 1
+	module_install_success=0
+
+	check_current_installation 1 1
 
 	if [ "$program_exists" -eq 1 ]; then
 
-
-		if [ $# -gt 2 ]; then
-			module_name=$1
-			base_dir=$2
-			force=$3
-		elif [ $# -gt 1 ]; then
-			module_name=$1
-			base_dir=$2
-		elif [ $# -gt 0 ]; then
-			module_name=$1 
+		if [ $# -lt 0 ]; then
+			error=1
+			err_message="Minimum of 1 parameter is required!"
 		else
-			lecho_err "Minimum of 1 parameter is required!"
-		fi
+			if [ $# -gt 4 ]; then
+				module_name=$1
+				base_dir=$2
+				force=$3
+				return_status=$4
+				silent_mode=$5
+
+				if [[ "$return_status" -eq 1 ]] || [[ "$silent_mode" -eq 1 ]]; then
+					force=true
+				fi
+			elif [ $# -gt 3 ]; then
+				module_name=$1
+				base_dir=$2
+				force=$3
+				return_status=$4
+				
+				if [[ "$return_status" -eq 1 ]]; then
+					force=true
+				fi
+			elif [ $# -gt 2 ]; then
+				module_name=$1
+				base_dir=$2
+				force=$3
+			elif [ $# -gt 1 ]; then
+				module_name=$1
+				base_dir=$2
+			elif [ $# -gt 0 ]; then
+				module_name=$1 
+			fi
 
 
-		local url=$(get_module_url $module_name)
-		local deploy_path="$base_dir/oneadmin/modules"
-		local module_conf="$deploy_path/conf/$module_name.json"
+			# check and see if module excists and if yes fetch url
+			local deploy_path="$base_dir/oneadmin/modules"
+			local module_conf="$deploy_path/conf/$module_name.json"
+			local url=$(get_module_url $module_name)			
 
 
-		if [ -z "$url" ]; then
-		
-			lecho_err "Module not found/cannot be installed!" && exit
-		
-		elif [ -f "$module_conf" ]; then
+			if [ -z "$url" ]; then
 
-			if [ "$force" = false ] ; then
+				error=1
+				err_message="Module not found/cannot be installed!"
+			
+			elif [ -f "$module_conf" ]; then
 
-				local response=
-				lecho "Module already exists. Proceeding forward operation will overwrite the existing module."
-				read -r -p "Do you wish to continue? [y/N] " response
-					case $response in
-					[yY][eE][sS]|[yY]) 
-						lecho "Installing module.."
-					;;
-					*)
-						lecho "Module installation cancelled" && exit
-					;;
-					esac
+				if [ "$force" = false ] ; then
+
+					local response=
+					lecho "Module already exists. Proceeding forward operation will overwrite the existing module."
+					read -r -p "Do you wish to continue? [y/N] " response
+						case $response in
+						[yY][eE][sS]|[yY]) 
+							lecho "Installing module.."
+						;;
+						*)
+							error=1
+							err_message="Module installation cancelled!"
+						;;
+						esac
+				fi
 			fi
 		fi
 
-		# ALL OK -> Do Ops
-		
-		local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
-		local module="$tmp_dir/$module_name.zip"	
-		local dest="$tmp_dir/$module_name"
 
-		sudo wget -O "$module" "$url"
-		sudo unzip $module -d "$tmp_dir/$module_name"
+		# ALL OK -> Do Ops	
+		if [[ "$error" -eq 0 ]]; then			
 
-		for j in $(find $dest -type f -print)
-		do				
-			local name=$(basename -- "$j")
-			local filename="${name%.*}"
+			local current_python="${PYTHON_VERSION//./}"
+			local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
+			local module="$tmp_dir/$module_name.zip"	
+			local dest="$tmp_dir/$module_name"
+			local module_requirements_file="$dest/requirements.txt"
 
-			if [[ $name == *$current_python.so ]]; then					
-				# Move tmp file to main location
-				lecho "Moving runtime file $j to $deploy_path/$filename.so"
-				sudo mv $j $deploy_path/$filename.so
+			sudo wget -O "$module" "$url"
+			sudo unzip $module -d "$dest"
 
-				# so and py versions of same module are mutually exclusive
-				if [ -f "$deploy_path/$filename.py" ]; then
-					sudo rm "$deploy_path/$filename.py"
+
+			if [ -f "$module_requirements_file" ]; then
+				# Install dependencies
+				if [[ "$silent_mode" -eq 0 ]]; then
+					lecho "Requirements file found!. Installing dependencies from file $j"						
 				fi
 
-			elif [[ $name == *.json ]]; then					
-				# Move tmp file to main location
-				lecho "Moving conf file $j to $deploy_path/conf/$filename.json"
-				sudo mv $j $deploy_path/conf/$filename.json
-			elif [[ $name == *.py ]]; then					
-				# Move tmp file to main location
-				lecho "Moving runtime file $j to $deploy_path/$filename.py"
-				sudo mv $j $deploy_path/$filename.py
+				install_module_dependencies $module_requirements_file
+			fi
+			
 
-				# so and py versions of same module are mutually exclusive
-				if [ -f "$deploy_path/$filename.so" ]; then
-					sudo rm "$deploy_path/$filename.so"
-				fi			
+			for j in "$dest"/*; do
+
+				local name=$(basename -- "$j")
+				local filename="${name%.*}"
+
+				if [[ "$name" == *"$current_python.so" ]]; then				
+					# Move tmp file to main location
+					if [[ "$silent_mode" -eq 0 ]]; then
+						lecho "Moving runtime file $j to $deploy_path/$module_name.so"
+					fi
+					sudo mv $j $deploy_path/$module_name.so
+					sudo chown $USER: "$deploy_path/$module_name.so"
+
+					# so and py versions of same module are mutually exclusive
+					if [ -f "$deploy_path/$filename.py" ]; then
+						sudo rm "$deploy_path/$module_name.py"
+					fi
+
+				elif [[ $name == *".json" ]]; then					
+					# Move tmp file to main location
+					if [[ "$silent_mode" -eq 0 ]]; then
+						lecho "Moving conf file $j to $deploy_path/conf/$module_name.json"
+					fi
+					sudo mv $j $deploy_path/conf/$module_name.json
+					sudo chown $USER: "$deploy_path/conf/$module_name.json"
+				elif [[ $name == *".py" ]]; then					
+					# Move tmp file to main location
+					if [[ "$silent_mode" -eq 0 ]]; then
+						lecho "Moving runtime file $j to $deploy_path/$module_name.py"
+					fi
+					sudo mv $j $deploy_path/$module_name.py
+					sudo chown $USER: "$deploy_path/$module_name.py"
+
+					# so and py versions of same module are mutually exclusive
+					if [ -f "$deploy_path/$filename.so" ]; then
+						sudo rm "$deploy_path/$module_name.so"
+					fi
+				fi
+
+			done
+
+			# success
+			module_install_success=1
+
+			if [[ "$return_status" -eq 1 ]]; then
+				error=0 && echo $error
+			else
+				if [[ "$silent_mode" -eq 0 ]]; then
+					lecho "Processing completed. You may want to restart $PROGRAM_NAME service"
+				fi
 			fi
 
-		done
+		else
 
-		lecho "Processing completed. You may want to restart $PROGRAM_NAME service"
+			if [[ "$return_status" -eq 1 ]]; then
+				error=1 && echo $error
+			else
+				if [[ "$silent_mode" -eq 0 ]]; then
+					lecho_err "An error occurred. $err_message"
+				fi
+			fi		
+
+		fi			
 	
 	else
-		lecho_err "Program core was not found. Please install the program before attempting to install modules."
+
+		if [[ "$return_status" -eq 1 ]]; then
+			error=1 && echo $error
+		else
+			if [[ "$silent_mode" -eq 0 ]]; then
+				lecho_err "Program core was not found. Please install the program before attempting to install modules."
+			fi
+		fi		
 	fi
-
 }
-
 
 
 
@@ -2002,18 +2271,15 @@ remove_module()
 		local name=$(basename -- "$j")
 		local filename="${name%.*}"
 
-		if [[ $name == *$module_name.so ]]; then					
-			# Move tmp file to main location
+		if [[ $name == *"$module_name.so" ]]; then					
 			found=true
 			lecho "Removing module file $j"
 			sudo rm -rf $j
-		elif [[ $name == *$module_name.json ]]; then					
-			# Move tmp file to main location
+		elif [[ $name == *"$module_name.json" ]]; then					
 			found=true
 			lecho "Removing module config $j"
 			sudo rm -rf $j
-		elif [[ $name == *$module_name.py ]]; then					
-			# Move tmp file to main location
+		elif [[ $name == *"$module_name.py" ]]; then					
 			found=true
 			lecho "Removing module file $j"
 			sudo rm -rf $j
@@ -2028,6 +2294,540 @@ remove_module()
 		lecho "Module not found. Nothing was removed"
 	fi
 }
+
+
+
+#############################################
+# Installs a grahil profile meant for current 
+# platform/python version from the archives to
+# the currently active grahil installation
+# 
+# NOTE: Requires build manifest, system detection
+# as well as python detection.
+#
+# GLOBALS:
+#		DEFAULT_PROGRAM_PATH, PROGRAM_NAME
+#
+# ARGUMENTS:
+#			$1 = profile name - String
+#			$2 = base directory path of grahil installation. defaults to DEFAULT_PROGRAM_PATH - String path
+#			$3 = Whether to force install (overwriting without prompt). - Boolean
+#
+#
+# RETURN:
+#		
+#############################################
+install_profile()
+{
+	local profile_name=
+	local base_dir=$DEFAULT_PROGRAM_PATH	
+	local force=false
+	local return_status=0
+	local silent_mode=0
+	local error=0
+	local err_message=	
+
+	check_current_installation 1 1
+
+	if [ "$program_exists" -eq 1 ]; then
+
+		if [ $# -lt 1 ]; then
+			error=1
+			err_message="Minimum of 1 parameter is required!"
+		else
+			if [ $# -gt 2 ]; then
+				profile_name=$1
+				base_dir=$2
+				force=$3
+			elif [ $# -gt 1 ]; then
+				profile_name=$1
+				base_dir=$2
+			elif [ $# -gt 0 ]; then
+				profile_name=$1 
+			fi
+
+			local url=$(get_profile_url $profile_name)
+			if [ -z ${url+x} ]; then
+				error=1
+				err_message="Profile not found/cannot be installed!"
+			fi
+
+			# ALL OK -> Do Ops		
+			if [[ "$error" -eq 0 ]]; then
+
+				local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
+				local profile_archive="$tmp_dir/$profile_name.zip"	
+				local profile_package_path="$tmp_dir/$profile_name"
+
+				local module_conf_source_path="$profile_package_path/modules/conf"
+				local scripts_source_path="$profile_package_path/scripts"
+				local rules_source_path="$profile_package_path/rules"
+				
+				local module_install_path="$base_dir/oneadmin/modules"
+				local module_conf_install_path="$base_dir/oneadmin/modules/conf"
+				local scripts_install_path="$base_dir/scripts"
+				local rules_install_path="$base_dir/rules"
+
+				# extract profile archive to a tmp location
+
+				sudo wget -O "$profile_archive" "$url"
+				sudo unzip $profile_archive -d $profile_package_path	
+
+				# read meta file
+				local meta_file="$profile_package_path/meta.json"
+				local result=$(<$meta_file)
+
+				local profile_name=$(jq -r '.name' <<< ${result})		
+				local add_modules=($(jq -r '.modules.add' <<< ${result}  | tr -d '[]," '))		
+				local remove_modules=($(jq -r '.modules.remove' <<< ${result}  | tr -d '[]," '))
+				local add_rules=($(jq -r '.rules.add' <<< ${result}  | tr -d '[]," '))
+				local remove_rules=($(jq -r '.rules.remove' <<< ${result}  | tr -d '[]," '))
+				local add_scripts=($(jq -r '.scripts.add' <<< ${result}  | tr -d '[]," '))
+				local remove_scripts=($(jq -r '.scripts.remove' <<< ${result}  | tr -d '[]," '))
+
+				# install required modules
+
+				for module in "${add_modules[@]}"
+				do				
+					module=${module//$'\n'/} # Remove all newlines.
+					#local install_error=$(install_module $module $DEFAULT_PROGRAM_PATH true 1)
+					install_module $module $DEFAULT_PROGRAM_PATH true 0 1
+					
+					if [ "$module_install_success" -eq 1 ]; then					
+						err_message="Failed to install module $module."
+						error=1
+						break
+					fi
+
+					local module_conf_source_file="$module_conf_source_path/$module.json"
+					local module_conf_target_file="$module_conf_install_path/$module.json"			
+
+					# copy over any specific configuration
+					if [ -f "$module_conf_source_file" ]; then
+						lecho "Copying over custom module configuration $module_conf_source_file to $module_conf_target_file"
+						sudo mv $module_conf_source_file $module_conf_target_file							
+						sudo chown $USER: "$module_conf_target_file"			
+					fi
+
+					# enable required modules
+					local tmpfile=$(echo "${module_conf_target_file/.json/.tmp}")
+					sudo echo "$( jq '.enabled = "true"' $module_conf_target_file )" > $tmpfile
+					sudo mv $tmpfile $module_conf_target_file
+				done
+
+				# If no module installer error -> continue profile setup				
+
+				if [[ "$module_install_success" -eq 1 ]]; then
+
+					# remove unwanted modules
+					for module in "${remove_modules[@]}"
+					do
+						module=${module//$'\n'/} # Remove all newlines.
+
+						local module_so_file="$module_install_path/$module.so"
+						local module_py_file="$module_install_path/$module.py"
+						local module_conf_file="$module_conf_install_path/$module.json"
+
+						# delete module file
+						if [ -f "$module_so_file" ]; then
+							lecho "Deleting module file $module_so_file"
+							sudo rm $module_so_file
+						elif [ -f "$module_py_file" ]; then
+							lecho "Deleting module file $module_py_file"
+							sudo rm $module_py_file
+						fi
+
+						# delete module conf file
+						if [ -f "$module_conf_file" ]; then
+							lecho "Deleting module config file $module_conf_file"
+							sudo rm $module_conf_file
+						fi
+
+					done
+
+
+					# install required rules
+
+					for rule in "${add_rules[@]}"
+					do
+
+						rule=${rule//$'\n'/} # Remove all newlines.
+
+						local installable_rule="$rules_source_path/$rule.json" 
+						local target_rule="$rules_install_path/$rule.json"
+
+						if [ -f "$installable_rule" ]; then
+
+							if [ -f "$target_rule" ]; then
+
+								local response=
+								lecho "Target $target_rule rule already exists. Proceeding with this operation will overwrite the existing rule."
+								read -r -p "Do you wish to continue? [y/N] " response
+								case $response in
+									[yY][eE][sS]|[yY]) 
+										lecho "Installing rule.."
+									;;
+									*)
+										error=1
+										lecho_err="Rule installation for $installable_rule cancelled!"
+										continue
+									;;
+								esac
+								
+							fi
+
+							lecho "Moving rule $installable_rule to $target_rule"
+							sudo mv $installable_rule $target_rule
+							sudo chown $USER: "$target_rule"
+						else
+							lecho "Something is wrong! Installable rule $installable_rule does not exist in the profile package."					
+						fi
+
+					done
+
+
+
+					# remove unwanted rules
+
+					for rule in "${remove_rules[@]}"
+					do
+
+						rule=${rule//$'\n'/} # Remove all newlines.
+
+						local removable_rule="$rules_install_path/$rule.json"
+
+						if [ -f "$removable_rule" ]; then
+							sudo rm $removable_rule
+						else
+							lecho "Rule $removable_rule does not exist at target location. Nothing to remove here!."					
+						fi
+
+					done
+
+
+					# install required scripts
+
+					for script in "${add_scripts[@]}"
+					do
+
+						script=${script//$'\n'/} # Remove all newlines.
+
+						local installable_script="$scripts_source_path/$script.sh" 
+						local target_script="$scripts_install_path/$script.sh"
+
+						if [ -f "$installable_script" ]; then
+
+							if [ -f "$target_script" ]; then
+								local response=
+								lecho "Target script $target_script already exists. Proceeding with this operation will overwrite the existing script."
+								read -r -p "Do you wish to continue? [y/N] " response
+								case $response in
+									[yY][eE][sS]|[yY]) 
+										lecho "Installing script.."
+									;;
+									*)
+										error=1
+										lecho_err="Script installation for $installable_rule cancelled!"
+										continue
+									;;
+								esac								
+							fi
+
+							lecho "Moving script $installable_script to $target_script"
+							sudo mv $installable_script $target_script
+							sudo chown $USER: "$target_script"
+							sudo chmod +x "$target_script"
+						else
+							lecho "Something is wrong! Installable script $installable_script does not exist in the profile package."					
+						fi
+
+					done
+
+
+					# remove unwanted scripts
+
+					for script in "${remove_scripts[@]}"
+					do
+
+						script=${script//$'\n'/} # Remove all newlines.
+
+						local removable_script="$scripts_install_path/$script.sh"
+
+						if [ -f "$removable_script" ]; then
+							sudo rm $removable_script
+						else
+							lecho "Script $removable_script does not exist at target location. Nothing to remove here!."					
+						fi
+
+					done
+
+
+					# once eveything is done mark current profile selection 
+					# => store active profile somewhere
+					if [ ! -f "$PROGRAM_INSTALLATION_REPORT_FILE" ]; then
+						echo "No installation report found."
+					else
+						update_installation_meta $profile_name
+					fi
+
+
+					# restart service
+					restart_grahil_service
+
+
+					#if [[ "$return_status" -eq 1 ]]; then
+					#	error=0 && echo $error
+					#else
+					#	lecho "Processing completed. You may want to restart $PROGRAM_NAME service"
+					#fi
+
+				else
+
+					# If there is module instalaltion error during profile installation,
+					# we remove all profile related modules
+					
+					for module in "${add_modules[@]}"
+					do
+
+						module=${module//$'\n'/} # Remove all newlines.
+
+						local module_so_file="$module_install_path/$module.so"
+						local module_py_file="$module_install_path/$module.py"
+						local module_conf_file="$module_conf_install_path/$module.json"
+
+						# delete module file
+						if [ -f "$module_so_file" ]; then
+							lecho "Deleting module file $module_so_file"
+							sudo rm $module_so_file
+						elif [ -f "$module_py_file" ]; then
+							lecho "Deleting module file $module_py_file"
+							sudo rm $module_py_file
+						fi
+
+						# delete module conf file
+						if [ -f "$module_conf_file" ]; then
+							lecho "Deleting module config file $module_conf_file"
+							sudo rm $module_conf_file
+						fi
+
+					done
+
+
+					if [[ "$return_status" -eq 1 ]]; then
+						error=1 && echo $error
+					else
+						lecho_err "Error in module installation to install module $err_message."
+					fi									
+				fi				
+			else
+				if [[ "$return_status" -eq 1 ]]; then
+					error=1 && echo $error
+				else
+					lecho_err "An error occurred. $err_message"
+				fi
+			fi
+		fi	
+	else
+
+		if [[ "$return_status" -eq 1 ]]; then
+			error=1 && echo $error
+		else
+			lecho_err "Program core was not found. Please install the program before attempting to install profiles."
+		fi		
+	fi	
+}
+
+
+
+
+
+
+#############################################
+# Removes any installed profile resetting
+# grahil to vanilla state.
+# 
+#
+# GLOBALS:
+#		DEFAULT_PROGRAM_PATH, PROGRAM_NAME
+#
+# ARGUMENTS:
+#			$1 = base directory path of grahil installation. defaults to DEFAULT_PROGRAM_PATH - String path
+#
+#
+# RETURN:
+#		
+#############################################
+clear_profile()
+{
+	local base_dir=$DEFAULT_PROGRAM_PATH	
+	local return_status=0
+	local silent_mode=0
+	local error=0
+	local err_message=	
+
+	check_current_installation 1 1
+
+	if [ "$program_exists" -eq 1 ]; then
+
+		if [ $# -gt 0 ]; then
+			base_dir=$1
+			
+			if [ ! -d "$base_dir" ]; then
+				error=1
+				err_message="Path $base_dir does not exist!"
+			fi
+		fi
+
+		# read manifest
+		read_installation_meta
+
+		# identify profile
+		local profile_name=$CURRENT_INSTALLATION_PROFILE
+
+
+		if [ -z ${profile_name+x} ]; then
+
+			error=1
+			err_message="No profile was found set for the current installation!"
+
+		else
+					
+			# download profile
+			local url=$(get_profile_url $profile_name)	
+
+			if [ -z ${url+x} ]; then
+				error=1
+				err_message="Profile not found/cannot be installed!"
+			fi
+
+		fi
+
+		
+		# ALL OK -> Do Ops		
+		if [[ "$error" -eq 0 ]]; then
+
+			local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
+			local profile_archive="$tmp_dir/$profile_name.zip"	
+			local profile_package_path="$tmp_dir/$profile_name"
+
+			local module_conf_source_path="$profile_package_path/modules/conf"
+			local scripts_source_path="$profile_package_path/scripts"
+			local rules_source_path="$profile_package_path/rules"
+			
+			local module_install_path="$base_dir/oneadmin/modules"
+			local module_conf_install_path="$base_dir/oneadmin/modules/conf"
+			local scripts_install_path="$base_dir/scripts"
+			local rules_install_path="$base_dir/rules"
+
+			# extract profile archive to a tmp location
+
+			sudo wget -O "$profile_archive" "$url"
+			sudo unzip $profile_archive -d $profile_package_path	
+
+			# read meta file
+			local meta_file="$profile_package_path/meta.json"
+			local result=$(<$meta_file)
+
+			local profile_name=$(jq -r '.name' <<< ${result})		
+			local add_modules=($(jq -r '.modules.add' <<< ${result}  | tr -d '[]," '))		
+			local remove_modules=($(jq -r '.modules.remove' <<< ${result}  | tr -d '[]," '))
+			local add_rules=($(jq -r '.rules.add' <<< ${result}  | tr -d '[]," '))
+			local remove_rules=($(jq -r '.rules.remove' <<< ${result}  | tr -d '[]," '))
+			local add_scripts=($(jq -r '.scripts.add' <<< ${result}  | tr -d '[]," '))
+			local remove_scripts=($(jq -r '.scripts.remove' <<< ${result}  | tr -d '[]," '))
+
+
+			# remove profile modules
+			for module in "${add_modules[@]}"
+			do				
+				module=${module//$'\n'/} # Remove all newlines.
+
+				local module_so_file="$module_install_path/$module.so"
+				local module_py_file="$module_install_path/$module.py"
+				local module_conf_file="$module_conf_install_path/$module.json"
+
+				# delete module file
+				if [ -f "$module_so_file" ]; then
+					lecho "Deleting module file $module_so_file"
+					sudo rm $module_so_file
+				elif [ -f "$module_py_file" ]; then
+					lecho "Deleting module file $module_py_file"
+					sudo rm $module_py_file
+				fi
+
+				# delete module conf file
+				if [ -f "$module_conf_file" ]; then
+					lecho "Deleting module config file $module_conf_file"
+					sudo rm $module_conf_file
+				fi
+
+			done
+
+
+			# remove profile rules
+
+			for rule in "${add_rules[@]}"
+			do
+
+				rule=${rule//$'\n'/} # Remove all newlines.
+
+				local removable_rule="$rules_install_path/$rule.json"
+
+				if [ -f "$removable_rule" ]; then
+					sudo rm $removable_rule
+				else
+					lecho "Rule $removable_rule does not exist at target location. Nothing to remove here!."					
+				fi
+			done
+
+
+
+			# remove profile scripts
+
+			for script in "${add_scripts[@]}"
+			do
+				script=${script//$'\n'/} # Remove all newlines.
+
+				local removable_script="$scripts_install_path/$script.sh"
+
+				if [ -f "$removable_script" ]; then
+					sudo rm $removable_script
+				else
+					lecho "Script $removable_script does not exist at target location. Nothing to remove here!."					
+				fi
+
+			done
+
+
+
+			# once eveything is done mark current profile selection 
+			# => store active profile somewhere
+			if [ ! -f "$PROGRAM_INSTALLATION_REPORT_FILE" ]; then
+				echo "No installation report found."
+			else
+				update_installation_meta ""
+			fi
+
+			# restart service
+			restart_grahil_service
+		else
+			if [[ "$return_status" -eq 1 ]]; then
+				error=1 && echo $error
+			else
+				lecho_err "An error occurred while clearing profile. $err_message"
+			fi
+		fi
+	else
+
+		if [[ "$return_status" -eq 1 ]]; then
+			error=1 && echo $error
+		else
+			lecho_err "Program core was not found. Please install the program before attempting to install profiles."
+		fi		
+	fi
+	
+}
+
 
 
 
@@ -2060,6 +2860,7 @@ register_updater()
 	sudo crontab -l 2>/dev/null | grep -v "$SCRIPT_PATH -u 1" | sudo crontab -	
 	(sudo crontab -l 2>/dev/null; echo "0 $PROGRAM_UPDATE_CRON_HOUR * * * $SCRIPT_PATH -u 1") | sudo crontab -
 }
+
 
 
 
@@ -2347,7 +3148,7 @@ update()
 	local module_conf_dir2="$temp_dir_for_latest/oneadmin/modules/conf"
 	for i in $(find $module_conf_dir2 -type f -print)
 	do
-		if [[ $i == *.json ]]; then
+		if [[ $i == *".json" ]]; then
 			local filename=$(basename -- "$i")
 			local extension="${filename##*.}"
 			local filename="${filename%.*}"
@@ -2361,7 +3162,7 @@ update()
 	local module_conf_dir="$DEFAULT_PROGRAM_PATH/oneadmin/modules/conf"
 	for i in $(find $module_conf_dir -type f -print)
 	do
-		if [[ $i == *.json ]]; then
+		if [[ $i == *".json" ]]; then
 			local filename=$(basename -- "$i")
 			local extension="${filename##*.}"
 			local filename="${filename%.*}"
@@ -2370,19 +3171,7 @@ update()
 	done
 
 
-	# >>> Install updates for existing modules as well <<<
-	lecho "Installing addon modules for latest build"
-	local base_dir=$temp_dir_for_latest
-	for i in "${existing_modules[@]}"
-	do
-	: 		
-		if [[ ! " ${new_modules[*]} " == *" $i "* ]]; then
-			sleep 1
-			lecho "Module $i was not found in latest core build. attempting to install as an addon.."
-			install_module $i $temp_dir_for_latest true # force install module into latest build download
-		fi
-	done
-
+	
 
 	# copy current to tmp workspace
 	sudo cp -a $DEFAULT_PROGRAM_PATH/. $temp_dir_for_existing/
@@ -2400,6 +3189,57 @@ update()
 	fi
 
 
+	## check if any profile was active on current installation
+	local has_profile=0
+	read_installation_meta
+
+	local profile_dir_path=""
+
+	local profile_name=$CURRENT_INSTALLATION_PROFILE
+	if [ ! -z "${profile_name}" ]; then 
+		lecho "profile was found for this installation" 
+		local url=$(get_profile_url $profile_name)
+		if [ -z "${url}" ]; then
+			error=1
+			err_message="Profile url not found!. Update will disregard profile"
+			profile_name=""
+		else
+			local tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
+			local profile_archive="$tmp_dir/$profile_name.zip"	
+			local profile_package_path="$tmp_dir/$profile_name"
+
+			# extract profile archive to a tmp location
+			sudo wget -O "$profile_archive" "$url"
+			sudo unzip $profile_archive -d $profile_package_path
+
+			local meta_file="$profile_package_path/meta.json"
+			if [ -f "$meta_file" ]; then
+				profile_dir_path=$profile_package_path
+				has_profile=1
+			fi			
+		fi
+	
+	else
+		lecho "No profile found for this installation" 	
+	fi
+
+
+
+	# >>> Install updates for existing modules <<<
+	lecho "Installing addon modules for latest build"
+	local base_dir=$temp_dir_for_latest
+	for i in "${existing_modules[@]}"
+	do
+	: 		
+		if [[ ! " ${new_modules[*]} " == *" $i "* ]]; then
+			sleep 1
+			lecho "Module $i was not found in latest core build. attempting to install as an addon.."
+			install_module $i $temp_dir_for_latest true # force install module into latest build download
+		fi
+	done
+
+
+
 	
 	# leave all files that are in old version but not in new version (custom modules and custom rules and custom scripts)
 	# carefully merge old configuration json with new configuration json -> validate jsons	
@@ -2410,7 +3250,7 @@ update()
 	
 	# pass tmp dir paths to merger	
 	sudo chmod +x $MERGE_SCRIPT
-	local merge_result=$(sudo $EXECUTABLE_PYTHON $MERGE_SCRIPT $temp_dir_for_latest $temp_dir_for_updated)
+	local merge_result=$(sudo $EXECUTABLE_PYTHON $MERGE_SCRIPT "$temp_dir_for_latest" "$temp_dir_for_updated" "$profile_dir_path")
 	if [[ $merge_result != *"merge ok"* ]]; then
 		lecho "Merging failed. Update will now exit!"
 		exit 1
@@ -2456,9 +3296,10 @@ update()
 		if [ -f "$ERROR_LOG_FILE" ]; then
 			local error_status=$(grep ERROR $ERROR_LOG_FILE)
 			if [ ! -z "$error_status" ]; then 
-				lecho "Program seems to have startup errors. Update needs to be reverted"		
-				lecho "Update failed!"
-				rollback_update $temp_dir_for_existing
+				lecho_err "Program seems to have startup errors. Update needs to be reverted"		
+				lecho_err "Update has failed!"
+				lecho "Start rollback!"
+				#rollback_update $temp_dir_for_existing
 			fi
 		
 		else
@@ -2549,6 +3390,27 @@ start_grahil_service()
 		lecho "Please check service file $PROGRAM_SERVICE_LOCATION/$PROGRAM_SERVICE_NAME"
 	fi
     sleep 2
+}
+
+
+
+
+
+#############################################
+# Restarts grahil service using systemctl
+#
+# ARGUMENTS:
+#
+# RETURN:
+#	
+#############################################
+restart_grahil_service()
+{
+	if is_service_installed; then
+		stop_grahil_service && sleep 2 && start_grahil_service
+	else
+		lecho_err "Service not found!"
+	fi
 }
 
 
@@ -3025,13 +3887,51 @@ write_installation_meta()
 {
 	local now=$(date)
 	local installtime=$now
+	local profile="$CURRENT_INSTALLATION_PROFILE"
 	local pythonversion=${PYTHON_VERSION/python/$replacement}
 	local replacement=""
 	local subject="python"
 	local interpreterpath="$PYTHON_VIRTUAL_ENV_LOCATION/$PROGRAM_FOLDER_NAME/bin/python$PYTHON_VERSION"
 	local requirements_filename=$(basename -- "$REQUIREMENTS_FILE")
 	
-	jq -n --arg interpreterpath "$interpreterpath" --arg pythonversion "$pythonversion" --arg installtime "$installtime" --arg requirements_filename "$requirements_filename" '{install_time: $installtime, python_version: $pythonversion, interpreter: $interpreterpath, requirements: $requirements_filename}' | sudo tee "$PROGRAM_INSTALLATION_REPORT_FILE" > /dev/null
+	jq -n --arg profile "$profile" --arg interpreterpath "$interpreterpath" --arg pythonversion "$pythonversion" --arg installtime "$installtime" --arg requirements_filename "$requirements_filename" '{install_time: $installtime, python_version: $pythonversion, interpreter: $interpreterpath, requirements: $requirements_filename, profile: $profile}' | sudo tee "$PROGRAM_INSTALLATION_REPORT_FILE" > /dev/null
+	sudo chown -R $USER: "$PROGRAM_INSTALLATION_REPORT_FILE"
+}
+
+
+
+
+
+#############################################
+# Updates current instalaltion profile in the instalaltion report
+# 
+# GLOBALS:
+#	PROGRAM_INSTALLATION_REPORT_FILE
+#
+# ARGUMENTS:
+#	$1: Profile name
+#
+# RETURN:
+#	
+#############################################
+update_installation_meta()
+{
+	if [ ! -f "$PROGRAM_INSTALLATION_REPORT_FILE" ]; then
+		lecho_err "No installation report found."
+	else
+
+		if [ $# -gt 0 ]; then
+			local profile_name=$1	
+			CURRENT_INSTALLATION_PROFILE=$profile_name
+			local result=$(<$PROGRAM_INSTALLATION_REPORT_FILE)
+			local tmpfile=$(echo "${PROGRAM_INSTALLATION_REPORT_FILE/.json/.tmp}")
+			sudo echo "$( jq --arg profile_name "$CURRENT_INSTALLATION_PROFILE" '.profile = $profile_name' $PROGRAM_INSTALLATION_REPORT_FILE )" > $tmpfile
+			sudo mv $tmpfile $PROGRAM_INSTALLATION_REPORT_FILE
+		else
+			lecho_err "Minimum of 1 parameter is required!"
+		fi	
+
+	fi
 }
 
 
@@ -3059,10 +3959,12 @@ read_installation_meta()
 		local pythonversion=$(jq -r '.python_version' <<< ${result})
 		local interpreterpath=$(jq -r '.interpreter' <<< ${result})
 		local requirements_filename=$(jq -r '.requirements' <<< ${result})
+		local profile=$(jq -r '.profile' <<< ${result})
 
 		INSTALLATION_PYTHON_VERSION="$pythonversion"
 		PYTHON_VIRTUAL_ENV_INTERPRETER=$interpreterpath
 		PYTHON_REQUIREMENTS_FILENAME=$requirements_filename
+		CURRENT_INSTALLATION_PROFILE="$profile"
 	fi
 }
 
@@ -3145,7 +4047,7 @@ post_download_install()
 
 		if [[ $virtual_environment_valid -eq 1 ]]; then	
 			
-			install_python_program_dependencies
+			install_python_program_dependencies 1
 
 			deactivate_virtual_environment
 
@@ -3450,6 +4352,7 @@ detect_system()
 	fi
 
 	write_log "OS TYPE $OS_TYPE"
+	sudo chown -R $USER: $LOG_FILE
 }
 
 
@@ -3478,7 +4381,10 @@ main()
 
 	if [[ $args_update_mode -eq -1 ]]; then
 
-		if [[ $args_module_request -eq 1 ]]; then
+		if [[ $args_profile_request -eq 1 ]]; then
+			echo "Clearing  profile" 
+			get_install_info &&	clear_profile
+		elif [[ $args_module_request -eq 1 ]]; then
 			echo "Uninstalling module" 
 			remove_module $args_module_name
 		else
@@ -3490,15 +4396,33 @@ main()
 		get_install_info
 
 		if [[ $args_update_mode -eq 0 ]]; then
-
-			if [[ $args_module_request -eq 1 ]]; then
+		
+			if [[ $args_profile_request -eq 1 ]]; then
 
 				if is_first_time_install; then
 					prerequisites_python
 				fi
 
-				echo "Installing module" && sleep 2
+				echo "Installing profile $args_profile_name" && sleep 2
+				install_profile $args_profile_name				
+
+			elif [[ $args_module_request -eq 1 ]]; then
+
+				if is_first_time_install; then
+					prerequisites_python
+				fi
+
+				#if [[ $args_enable_disable_request -eq 1 ]]; then
+
+				#	if [ "$args_enable_disable" == "true" ]; then
+				#		enable_module $args_module_name
+				#	else
+				#		disable_module $args_module_name
+				#	fi					
+				#else
+				echo "Installing module $args_module_name" && sleep 2
 				install_module $args_module_name
+				#fi			
 
 			else				
 				echo "Installing core" && sleep 2 
@@ -4012,10 +4936,32 @@ validate_args()
 
 		# validate value
 		if [ "$args_update_mode" -lt "-1" ] || [ "$args_update_mode" -gt "1" ]; then
-			echo "Invalid value for -update flag." && exit 1
+			lecho_err "Invalid value for -update flag." && exit 1
 		fi
-
 	fi
+	
+
+
+	# if profile requested
+	if [[ "$args_profile_request" -eq 1 ]]; then
+
+		# if uninstall requested
+		if [[ "$args_update_mode" -lt 0 ]]; then # removal
+
+			# validate value
+			if [ "$args_profile_name" != "reset" ]; then
+				lecho_err "Invalid profile parameter provided!.For clearing profile, please use the profile name as -> "reset"." && exit 1
+			fi	
+
+		elif [[ "$args_update_mode" -eq 0 ]]; then # installation
+
+			# validate value
+			if [ -z ${args_profile_name+x} ]; then
+				lecho_err "Profile name must be expected but was not provided." && exit 1
+			fi
+		fi
+	fi
+
 
 
 	# if module installation requested
@@ -4023,8 +4969,19 @@ validate_args()
 		
 		# validate value
 		if [ -z ${args_module_name+x} ]; then
-			echo "Module name must be expected but was not provided." && exit 1
+			lecho_err "Module name must be expected but was not provided." && exit 1
 		fi
+
+		# if enable disable mode is set
+		#if [ ! -z ${args_enable_disable+x} ]; then
+
+		#	if [ "$args_enable_disable" == "true" ] ||  [ "$args_enable_disable" == "false" ]; then
+		#		args_enable_disable_request=1
+		#	else
+		#		lecho_err "Enable/Disable request is rejected due to incorrect parameter value -> $args_enable_disable." && exit 1
+		#	fi
+
+		#fi
 
 	fi
 
@@ -4062,11 +5019,15 @@ usage()
 
 
 # grab any shell arguments
-while getopts 'm:u:ird:h' o; do
+while getopts 'm:u:p:irde:h' o; do
     case "${o}" in
 		m) 
 			args_module_request=1
 			args_module_name="${OPTARG}"		
+		;;
+		p) 
+			args_profile_request=1
+			args_profile_name="${OPTARG}"		
 		;;
 		u) 
 			args_update_request=1
@@ -4082,6 +5043,9 @@ while getopts 'm:u:ird:h' o; do
 		d)
 			args_requirements_file="${OPTARG}"
 		;;
+		#e)
+		#	args_enable_disable="${OPTARG}"
+		#;;
 		h|*)
 			usage
 			exit 1
@@ -4096,5 +5060,9 @@ if ! validatePermissions; then
 	request_permission;
 fi
 
-# start
+
+#############################################
+# THIS PROGRAM SHOULD NOT BE RUN WITH `sudo` command#	
+#############################################
+# Main entry point
 main
