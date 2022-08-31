@@ -1814,6 +1814,8 @@ get_install_info()
 		eval "$(jq -M -r '@sh "package_enabled=\(.payload.platform.x86_64.enabled) package_url=\(.payload.platform.x86_64.url) package_hash=\(.payload.platform.x86_64.md5) package_version=\(.payload.version) supported_interpreters=\(.payload.platform.x86_64.dependencies.interpreters)"' <<< "$manifestdata")"	
 	elif [ "$PLATFORM_ARCH" == "arm64" ]; then
 		eval "$(jq -M -r '@sh "package_enabled=\(.payload.platform.arm64.enabled) package_url=\(.payload.platform.arm64.url) package_hash=\(.payload.platform.arm64.md5) package_version=\(.payload.version) supported_interpreters=\(.payload.platform.arm64.dependencies.interpreters)"' <<< "$manifestdata")"	
+	elif [ "$PLATFORM_ARCH" == "aarch64" ]; then
+		eval "$(jq -M -r '@sh "package_enabled=\(.payload.platform.aarch64.enabled) package_url=\(.payload.platform.aarch64.url) package_hash=\(.payload.platform.aarch64.md5) package_version=\(.payload.version) supported_interpreters=\(.payload.platform.aarch64.dependencies.interpreters)"' <<< "$manifestdata")"	
 	else
 		lecho_err "Unknown/unsupported cpu architecture!!.Contact support for further assistance."
 		exit
@@ -4292,9 +4294,15 @@ detect_system()
 	    IS_64_BIT=1
 	    os_bits="64 Bit"
 	    ;;
-	aarch64|arm64)
+	arm64)
 		PLATFORM_ARCH="arm64"
-	    ARCH=arm  # IA32 or Intel32 or whatever
+	    ARCH=arm 
+	    IS_64_BIT=1
+	    os_bits="64 Bit"
+	    ;;
+	aarch64)
+		PLATFORM_ARCH="aarch64"
+	    ARCH=arm
 	    IS_64_BIT=1
 	    os_bits="64 Bit"
 	    ;;
