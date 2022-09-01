@@ -4342,7 +4342,7 @@ detect_system()
 	lecho "Downloads directory: $PROGRAM_DEFAULT_DOWNLOAD_FOLDER"
 
 	
-	if [[ $OS_NAME == *"Ubuntu"* ]]; then
+	if [[ $OS_NAME == *"Ubuntu"* || $OS_NAME == *"Debian"* ]]; then
 	OS_TYPE=$OS_DEB
 	elif [[ $OS_NAME == *"Raspbian"* ]]; then
 	OS_TYPE=$OS_DEB
