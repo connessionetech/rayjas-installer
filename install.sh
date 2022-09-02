@@ -3370,6 +3370,39 @@ auto_install_program()
 
 
 #############################################
+# Starts grahil service on user prompt using 
+# systemctl
+# 
+# GLOBALS:
+#
+# ARGUMENTS:
+#
+# RETURN:
+#	
+#############################################	
+prompt_start_grahil_service()
+{	
+	if is_service_installed; then
+		lecho "Do you want to start the service now?"
+		read -r -p "Are you sure? [y/N] " response
+
+		case $response in
+		[yY][eE][sS]|[yY]) 
+		start_grahil_service
+		;;
+		*)
+		lecho "No problem. Service will be autostarted on next system start. You can also manually start it from shell."
+		lecho "For more info please refer to documentation!"
+		;;
+		esac
+	else
+		lecho_err "Service not found/installed!"
+	fi
+}
+
+
+
+#############################################
 # Starts grahil service using systemctl
 # 
 # GLOBALS:
@@ -4074,6 +4107,8 @@ post_download_install()
 
 				if $PROGRAM_SERVICE_AUTOSTART; then
 					start_grahil_service
+				else
+					prompt_start_grahil_service
 				fi
 			fi
 
