@@ -36,26 +36,26 @@ CURRENT_INSTALLATION_PROFILE=
 CONFIGURATION_FILE=conf.ini
 
 LOGGING=true
-LOG_FILE_NAME=rayjas_installer.log
+LOG_FILE_NAME=installer.log
 LOG_FILE=$PWD/$LOG_FILE_NAME
 
-OS_TYPE=
-OS_DEB="DEBIAN"
-OS_RHL="REDHAT"
-
+PROGRAM_NAME=rayjas
+PROGRAM_SERVICE_NAME=$PROGRAM_NAME
 PROGRAM_INSTALL_AS_SERVICE=true 
 PROGRAM_SERVICE_LOCATION=/lib/systemd/system
-PROGRAM_SERVICE_NAME=rayjas.service
-DEFAULT_PROGRAM_PATH=/usr/local/rayjas
-PYTHON_MAIN_FILE=run.py
-PROGRAM_INSTALL_REPORT_NAME=report.json
+DEFAULT_PROGRAM_PATH="/usr/local/$PROGRAM_NAME"
 PROGRAM_CONFIGURATION_MERGER=/python/smartmerge.py
+PROGRAM_INSTALL_REPORT_NAME=report.json
+PYTHON_MAIN_FILE=run.py
 
 IS_64_BIT=0
 OS_NAME=
 OS_VERSION=
 PLATFORM_ARCH=
 OS_MAJ_VERSION=
+OS_TYPE=
+OS_DEB="DEBIAN"
+OS_RHL="REDHAT"
 
 
 PROGRAM_DEFAULT_DOWNLOAD_FOLDER_NAME="tmp"
@@ -2537,7 +2537,7 @@ install_profile()
 
 
 					# restart service
-					restart_rayjas_service
+					restart_service
 
 
 					#if [[ "$return_status" -eq 1 ]]; then
@@ -2774,7 +2774,7 @@ clear_profile()
 			fi
 
 			# restart service
-			restart_rayjas_service
+			restart_service
 		else
 			if [[ "$return_status" -eq 1 ]]; then
 				error=1 && echo $error
@@ -2954,7 +2954,7 @@ rollback_update()
 	echo "Stopping running program"
 	if is_service_installed; then
 		if is_service_running; then
-			stop_rayjas_service
+			stop_service
 		fi
 	fi
 
@@ -3080,7 +3080,7 @@ update()
 	if is_service_installed; then
 		echo "Stopping running program"
 		if is_service_running; then
-			stop_rayjas_service
+			stop_service
 		fi
 	fi
 
@@ -3250,7 +3250,7 @@ update()
 	if is_service_installed; then
 		lecho "Restarting program"
 		if ! is_service_running; then
-			start_rayjas_service
+			start_service
 		fi
 		#optionally monitor error log of the program post startup. 
 		#if we see startup errors then revert to old version
@@ -3338,15 +3338,16 @@ auto_install_program()
 # RETURN:
 #	
 #############################################	
-start_rayjas_service()
+start_service()
 {
-    lecho "Start rayjas service"
+    lecho "Start $PROGRAM_NAME service"
     
-    sudo systemctl start rayjas.service
+    sudo systemctl start $PROGRAM_SERVICE_NAME
+	
 	if [ "0" -eq $? ]; then
-		lecho "rayjas service started!"
+		lecho "$PROGRAM_NAME service started!"
 	else
-		lecho "rayjas service file was not started!"
+		lecho "$PROGRAM_NAME service file was not started!"
 		lecho "Please check service file $PROGRAM_SERVICE_LOCATION/$PROGRAM_SERVICE_NAME"
 	fi
     sleep 2
@@ -3364,10 +3365,10 @@ start_rayjas_service()
 # RETURN:
 #	
 #############################################
-restart_rayjas_service()
+restart_service()
 {
 	if is_service_installed; then
-		stop_rayjas_service && sleep 2 && start_rayjas_service
+		stop_service && sleep 2 && start_service
 	else
 		lecho_err "Service not found!"
 	fi
@@ -3387,9 +3388,9 @@ restart_rayjas_service()
 # RETURN:
 #	
 #############################################	
-stop_rayjas_service(){
-    lecho "Stop rayjas service"
-    sudo systemctl stop rayjas.service
+stop_service(){
+    lecho "Stop $PROGRAM_NAME service"
+    sudo systemctl stop $PROGRAM_SERVICE_NAME
     sleep 2
 }
 
@@ -3414,7 +3415,7 @@ register_as_service()
 
 	if [ "$program_exists" -eq 1 ]; then
 
-		write_log "Registering service for rayjas"
+		write_log "Registering service for $PROGRAM_NAME"
 
 		if [ -f "$PROGRAM_SERVICE_LOCATION/$PROGRAM_SERVICE_NAME" ]; then
 			lecho "Service already exists. Do you wish to re-install ?" 
@@ -3595,7 +3596,7 @@ register_service()
 #######################################################
 
 service_script="[Unit]
-Description=rayjas Service
+Description=$PROGRAM_NAME Service
 After=multi-user.target
 
 [Service]
@@ -4018,7 +4019,7 @@ post_download_install()
 				# stop if running
 				if is_service_installed; then
 					if is_service_running; then
-						stop_rayjas_service	
+						stop_service	
 					fi
 				fi
 
@@ -4031,7 +4032,7 @@ post_download_install()
 				register_as_service 1				
 
 				if $PROGRAM_SERVICE_AUTOSTART; then
-					start_rayjas_service
+					start_service
 				fi
 			fi
 
@@ -4065,7 +4066,7 @@ uninstall()
 	# stop if running
 	if is_service_installed; then
 		if is_service_running; then
-			stop_rayjas_service	
+			stop_service	
 		fi
 	fi
 
@@ -4182,6 +4183,9 @@ load_configuration()
 	PROGRAM_INSTALLATION_REPORT_FILE="$DEFAULT_PROGRAM_PATH/$PROGRAM_INSTALL_REPORT_NAME"
 	PROGRAM_ARCHIVE_NAME="$PROGRAM_NAME.zip"
 	PROGRAM_SERVICE_NAME="$PROGRAM_NAME.service"
+
+	LOG_FILE_NAME="$PROGRAM_NAME_installer.log"
+	LOG_FILE=$PWD/$LOG_FILE_NAME
 }
 
 
