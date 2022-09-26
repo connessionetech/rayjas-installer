@@ -1,7 +1,7 @@
 #!/bin/bash
 #!/usr/bin/bash 
 
-## This file is part of `Grahil` 
+## This file is part of `Rayjas` 
 ## Copyright 2018 Connessione Technologies
 ## 
 ## This program is free software: you can redistribute it and/or modify
@@ -36,7 +36,7 @@ CURRENT_INSTALLATION_PROFILE=
 CONFIGURATION_FILE=conf.ini
 
 LOGGING=true
-LOG_FILE_NAME=grahil_installer.log
+LOG_FILE_NAME=rayjas_installer.log
 LOG_FILE=$PWD/$LOG_FILE_NAME
 
 OS_TYPE=
@@ -45,8 +45,8 @@ OS_RHL="REDHAT"
 
 PROGRAM_INSTALL_AS_SERVICE=true 
 PROGRAM_SERVICE_LOCATION=/lib/systemd/system
-PROGRAM_SERVICE_NAME=grahil.service
-DEFAULT_PROGRAM_PATH=/usr/local/grahil
+PROGRAM_SERVICE_NAME=rayjas.service
+DEFAULT_PROGRAM_PATH=/usr/local/rayjas
 PYTHON_MAIN_FILE=run.py
 PROGRAM_INSTALL_REPORT_NAME=report.json
 PROGRAM_CONFIGURATION_MERGER=/python/smartmerge.py
@@ -1359,7 +1359,7 @@ install_bc_rhl()
 
 
 #############################################
-# Check if grahil is installed on system
+# Check if rayjas is installed on system
 # GLOBALS:
 #
 # ARGUMENTS:
@@ -1387,9 +1387,9 @@ program_exists()
 }
 
 
-# Creates virtual environment for grahil
+# Creates virtual environment for rayjas
 #############################################
-# Check and create virtual environment for grahil,
+# Check and create virtual environment for rayjas,
 # using the python version determined.If environment
 # already exists, determine its usability. Then
 # either reuse the same environment or create new.
@@ -1462,7 +1462,7 @@ check_create_virtual_environment()
 
 
 #############################################
-# Activate the virtual environment for grahil
+# Activate the virtual environment for rayjas
 # 
 # GLOBALS:
 #		virtual_environment_valid, VENV_FOLDER
@@ -1629,7 +1629,7 @@ deactivate_virtual_environment()
 
 
 #############################################
-# Downloads and installs grahil distribution 
+# Downloads and installs rayjas distribution 
 # from a url. If files are copied properly to 
 # location, the value of latest_download_success
 # is set to 1.
@@ -1752,48 +1752,13 @@ unpack_runtime_libraries()
 
 
 
-
-#############################################
-# Downloads and installs grahil distribution 
-# from github.
-# 
-# GLOBALS:
-#		PROGRAM_GIT_LOCATION, PROGRAM_INSTALL_LOCATION,
-#		PROGRAM_GIT_BRANCH, latest_download_success
-#
-# ARGUMENTS:
-#
-# RETURN:
-#		
-#############################################
-install_from_git()
-{
-	cd "$PROGRAM_INSTALL_LOCATION"
-	
-
-	if [ -z "$PROGRAM_GIT_BRANCH" ]; then
-		git clone "$PROGRAM_GIT_LOCATION" grahil
-	else
-		git clone -b "$PROGRAM_GIT_BRANCH"  "$PROGRAM_GIT_LOCATION" grahil
-	fi
-
-	if program_exists; then
-		latest_download_success=1
-	else
-		latest_download_success=0
-	fi
-}
-
-
-
-
 #############################################
 # Reads installation manifest from the internet
 # url defined and parses.
 # 
 # GLOBALS:
-#		PROGRAM_GIT_LOCATION, PROGRAM_INSTALL_LOCATION,
-#		PROGRAM_GIT_BRANCH, latest_download_success
+#		PROGRAM_MANIFEST_LOCATION, PROGRAM_INSTALL_LOCATION,
+#		PLATFORM_ARCH, PROGRAM_VERSION, PROGRAM_HASH, PROGRAM_SUPPORTED_INTERPRETERS
 #
 # ARGUMENTS:
 #
@@ -1860,7 +1825,7 @@ get_module_url()
 	local module_name="$1.zip"
 	local url=$PROGRAM_ARCHIVE_LOCATION
 	url=${url/core/modules}
-	url=${url/grahil.zip/$module_name}
+	url=${url/rayjas.zip/$module_name}
 	if http_file_exists $url; then
 		echo $url
 	else
@@ -1892,7 +1857,7 @@ get_profile_url()
 	local profile_name="$1.zip"
 	local url=$PROGRAM_ARCHIVE_LOCATION
 	url=$(echo "$url" | sed "s/core/profiles/")
-	url=$(echo "$url" | sed "s/grahil.zip/$profile_name/")
+	url=$(echo "$url" | sed "s/rayjas.zip/$profile_name/")
 	url=$(echo "$url" | sed "s#$PLATFORM_ARCH/##")	
 
 	if http_file_exists $url; then
@@ -1930,7 +1895,7 @@ http_file_exists()
 
 
 #############################################
-# Enable a grahil module
+# Enable a rayjas module
 # 
 # GLOBALS:
 #		
@@ -1958,7 +1923,7 @@ enable_module()
 
 
 #############################################
-# Disable a grahil module
+# Disable a rayjas module
 # 
 # GLOBALS:
 #		
@@ -1985,7 +1950,7 @@ disable_module()
 
 
 #############################################
-# Enable a grahil reaction rule
+# Enable a rayjas reaction rule
 # 
 # GLOBALS:
 #		
@@ -2014,7 +1979,7 @@ enable_reaction_rule()
 
 
 #############################################
-# Disable a grahil reaction rule
+# Disable a rayjas reaction rule
 # 
 # GLOBALS:
 #		
@@ -2042,9 +2007,9 @@ disable_reaction_rule()
 
 
 #############################################
-# Installs a grahil module meant for current 
+# Installs a rayjas module meant for current 
 # platform/python version from the archives to
-# the currently active grahil installation
+# the currently active rayjas installation
 # 
 # NOTE: Requires build manifest, system detection
 # as well as python detection.
@@ -2054,7 +2019,7 @@ disable_reaction_rule()
 #
 # ARGUMENTS:
 #			$1 = module name - String
-#			$2 = base directory path of grahil installation. defaults to DEFAULT_PROGRAM_PATH - String path
+#			$2 = base directory path of rayjas installation. defaults to DEFAULT_PROGRAM_PATH - String path
 #			$3 = Whether to force install (overwriting without prompt). - Boolean
 #
 #
@@ -2247,8 +2212,8 @@ install_module()
 
 
 #############################################
-# Removes a grahil module meant from
-# the currently active grahil installation
+# Removes a rayjas module meant from
+# the currently active rayjas installation
 # 
 # GLOBALS:
 #		DEFAULT_PROGRAM_PATH, PROGRAM_NAME
@@ -2298,9 +2263,9 @@ remove_module()
 
 
 #############################################
-# Installs a grahil profile meant for current 
+# Installs a rayjas profile meant for current 
 # platform/python version from the archives to
-# the currently active grahil installation
+# the currently active rayjas installation
 # 
 # NOTE: Requires build manifest, system detection
 # as well as python detection.
@@ -2310,7 +2275,7 @@ remove_module()
 #
 # ARGUMENTS:
 #			$1 = profile name - String
-#			$2 = base directory path of grahil installation. defaults to DEFAULT_PROGRAM_PATH - String path
+#			$2 = base directory path of rayjas installation. defaults to DEFAULT_PROGRAM_PATH - String path
 #			$3 = Whether to force install (overwriting without prompt). - Boolean
 #
 #
@@ -2572,7 +2537,7 @@ install_profile()
 
 
 					# restart service
-					restart_grahil_service
+					restart_rayjas_service
 
 
 					#if [[ "$return_status" -eq 1 ]]; then
@@ -2644,14 +2609,14 @@ install_profile()
 
 #############################################
 # Removes any installed profile resetting
-# grahil to vanilla state.
+# rayjas to vanilla state.
 # 
 #
 # GLOBALS:
 #		DEFAULT_PROGRAM_PATH, PROGRAM_NAME
 #
 # ARGUMENTS:
-#			$1 = base directory path of grahil installation. defaults to DEFAULT_PROGRAM_PATH - String path
+#			$1 = base directory path of rayjas installation. defaults to DEFAULT_PROGRAM_PATH - String path
 #
 #
 # RETURN:
@@ -2809,7 +2774,7 @@ clear_profile()
 			fi
 
 			# restart service
-			restart_grahil_service
+			restart_rayjas_service
 		else
 			if [[ "$return_status" -eq 1 ]]; then
 				error=1 && echo $error
@@ -2989,7 +2954,7 @@ rollback_update()
 	echo "Stopping running program"
 	if is_service_installed; then
 		if is_service_running; then
-			stop_grahil_service
+			stop_rayjas_service
 		fi
 	fi
 
@@ -3115,7 +3080,7 @@ update()
 	if is_service_installed; then
 		echo "Stopping running program"
 		if is_service_running; then
-			stop_grahil_service
+			stop_rayjas_service
 		fi
 	fi
 
@@ -3285,7 +3250,7 @@ update()
 	if is_service_installed; then
 		lecho "Restarting program"
 		if ! is_service_running; then
-			start_grahil_service
+			start_rayjas_service
 		fi
 		#optionally monitor error log of the program post startup. 
 		#if we see startup errors then revert to old version
@@ -3317,7 +3282,7 @@ update()
 
 
 #############################################
-# Installs grahil
+# Installs rayjas
 # 
 # GLOBALS:
 #		latest_download_success
@@ -3345,13 +3310,8 @@ auto_install_program()
 	fi
 
 
-	if [ ! -z "$PROGRAM_GIT_LOCATION" ]; then
-		lecho "install_from_git"
-		install_from_git
-	else
-		lecho "install_from_url"
-		install_from_url
-	fi
+	lecho "install_from_url"
+	install_from_url
 		
 
 	if [ "$latest_download_success" -eq 0 ]; then
@@ -3368,7 +3328,7 @@ auto_install_program()
 
 
 #############################################
-# Starts grahil service using systemctl
+# Starts rayjas service using systemctl
 # 
 # GLOBALS:
 #		PROGRAM_SERVICE_LOCATION, PROGRAM_SERVICE_NAME
@@ -3378,15 +3338,15 @@ auto_install_program()
 # RETURN:
 #	
 #############################################	
-start_grahil_service()
+start_rayjas_service()
 {
-    lecho "Start grahil service"
+    lecho "Start rayjas service"
     
-    sudo systemctl start grahil.service
+    sudo systemctl start rayjas.service
 	if [ "0" -eq $? ]; then
-		lecho "grahil service started!"
+		lecho "rayjas service started!"
 	else
-		lecho "grahil service file was not started!"
+		lecho "rayjas service file was not started!"
 		lecho "Please check service file $PROGRAM_SERVICE_LOCATION/$PROGRAM_SERVICE_NAME"
 	fi
     sleep 2
@@ -3397,17 +3357,17 @@ start_grahil_service()
 
 
 #############################################
-# Restarts grahil service using systemctl
+# Restarts rayjas service using systemctl
 #
 # ARGUMENTS:
 #
 # RETURN:
 #	
 #############################################
-restart_grahil_service()
+restart_rayjas_service()
 {
 	if is_service_installed; then
-		stop_grahil_service && sleep 2 && start_grahil_service
+		stop_rayjas_service && sleep 2 && start_rayjas_service
 	else
 		lecho_err "Service not found!"
 	fi
@@ -3417,7 +3377,7 @@ restart_grahil_service()
 
 
 #############################################
-# Stops grahil service using systemctl
+# Stops rayjas service using systemctl
 # 
 # GLOBALS:
 #		PROGRAM_SERVICE_LOCATION, PROGRAM_SERVICE_NAME
@@ -3427,9 +3387,9 @@ restart_grahil_service()
 # RETURN:
 #	
 #############################################	
-stop_grahil_service(){
-    lecho "Stop grahil service"
-    sudo systemctl stop grahil.service
+stop_rayjas_service(){
+    lecho "Stop rayjas service"
+    sudo systemctl stop rayjas.service
     sleep 2
 }
 
@@ -3437,7 +3397,7 @@ stop_grahil_service(){
 
 
 #############################################
-# Checks installation and registers grahil 
+# Checks installation and registers rayjas 
 # as system service
 # 
 # GLOBALS:
@@ -3454,7 +3414,7 @@ register_as_service()
 
 	if [ "$program_exists" -eq 1 ]; then
 
-		write_log "Registering service for grahil"
+		write_log "Registering service for rayjas"
 
 		if [ -f "$PROGRAM_SERVICE_LOCATION/$PROGRAM_SERVICE_NAME" ]; then
 			lecho "Service already exists. Do you wish to re-install ?" 
@@ -3483,7 +3443,7 @@ register_as_service()
 
 
 #############################################
-# Unregister grahil as system service
+# Unregister rayjas as system service
 # 
 # GLOBALS:
 #		PROGRAM_SERVICE_LOCATION, PROGRAM_SERVICE_NAME
@@ -3533,7 +3493,7 @@ install_archive()
 
 
 #############################################
-# Checks if file is a valid archive of grahil
+# Checks if file is a valid archive of rayjas
 # dist.
 # 
 # GLOBALS:
@@ -3602,7 +3562,7 @@ isSingleLevel()
 
 
 #############################################
-# Writes system service file for grahil
+# Writes system service file for rayjas
 # 
 # GLOBALS:
 #		PYTHON_VIRTUAL_ENV_LOCATION, PROGRAM_FOLDER_NAME,
@@ -3635,7 +3595,7 @@ register_service()
 #######################################################
 
 service_script="[Unit]
-Description=Grahil Service
+Description=rayjas Service
 After=multi-user.target
 
 [Service]
@@ -3680,7 +3640,7 @@ WantedBy=multi-user.target
 
 
 #############################################
-# Removes system service file for grahil
+# Removes system service file for rayjas
 # 
 # GLOBALS:
 #		PROGRAM_SERVICE_NAME, PROGRAM_SERVICE_LOCATION
@@ -3770,7 +3730,7 @@ is_service_running()
 
 #############################################
 # Checks and verifies the current installation 
-# of grahil. Takes two optional arguments.
+# of rayjas. Takes two optional arguments.
 # 
 # GLOBALS:
 #		PROGRAM_SERVICE_NAME
@@ -4058,7 +4018,7 @@ post_download_install()
 				# stop if running
 				if is_service_installed; then
 					if is_service_running; then
-						stop_grahil_service	
+						stop_rayjas_service	
 					fi
 				fi
 
@@ -4071,7 +4031,7 @@ post_download_install()
 				register_as_service 1				
 
 				if $PROGRAM_SERVICE_AUTOSTART; then
-					start_grahil_service
+					start_rayjas_service
 				fi
 			fi
 
@@ -4089,7 +4049,7 @@ post_download_install()
 
 
 #############################################
-# Removes the existing installation of grahil
+# Removes the existing installation of rayjas
 # 
 # GLOBALS:
 #		PYTHON_VIRTUAL_ENV_LOCATION, PROGRAM_FOLDER_NAME,
@@ -4105,7 +4065,7 @@ uninstall()
 	# stop if running
 	if is_service_installed; then
 		if is_service_running; then
-			stop_grahil_service	
+			stop_rayjas_service	
 		fi
 	fi
 
