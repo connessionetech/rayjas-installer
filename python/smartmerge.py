@@ -12,7 +12,7 @@ import logging
 
 
 # Configure the logging system
-logging.basicConfig(filename ='grahil_update.log',
+logging.basicConfig(filename ='rayjas_update.log',
                     level = logging.DEBUG)
 
 
