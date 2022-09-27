@@ -3359,7 +3359,7 @@ prompt_start_service()
 
 		case $response in
 		[yY][eE][sS]|[yY]) 
-		start_grahil_service
+		start_service
 		;;
 		*)
 		lecho "No problem. Service will be autostarted on next system start. You can also manually start it from shell."
