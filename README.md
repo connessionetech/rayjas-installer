@@ -1,16 +1,16 @@
-# Grahil Installer
+# rayjas Installer
 
 ## Introduction
 
-`Grahil installer` is a collection of scripts to facilitate smooth and smart installation, update and uninstall of the `grahil` software on popular desktop/server linux systems as well as ARM systems such as Raspberry PI/Orange PI. The script is optimized to detect your system type, and install all necessary dependencies thta are needed to run `Grahil`. The installer will propmpt for superuser permissions when it is started. This permission is used to execute `sudo` level commands.
+`rayjas installer` is a collection of scripts to facilitate smooth and smart installation, update and uninstall of the `rayjas` software on popular desktop/server linux systems as well as ARM systems such as Raspberry PI/Orange PI. The script is optimized to detect your system type, and install all necessary dependencies thta are needed to run `rayjas`. The installer will propmpt for superuser permissions when it is started. This permission is used to execute `sudo` level commands.
 
-`Grahil installer` makes use of root's crontab to register itself as an autoupdater. The shell script is then autorun by the system once a day (at designated hour) to look for and autoupdate the exsiting `grahil` installation. It is important to note that Updating can be done manually as well as automatically. We will be discussing various options in the following sections. A vital part of the update process si the `smartmerge` python module. This module helps in merging JSON configuration files efficiently during the update, which helps transition from old version of the software to new without breaking/corrupting anything. `Smartmerge` also attempts to preserve your older configuration edits.
+`rayjas installer` makes use of root's crontab to register itself as an autoupdater. The shell script is then autorun by the system once a day (at designated hour) to look for and autoupdate the exsiting `rayjas` installation. It is important to note that Updating can be done manually as well as automatically. We will be discussing various options in the following sections. A vital part of the update process si the `smartmerge` python module. This module helps in merging JSON configuration files efficiently during the update, which helps transition from old version of the software to new without breaking/corrupting anything. `Smartmerge` also attempts to preserve your older configuration edits.
 
-`Grahil installer` in autoupdate mode can seamlessly update the `grahil` program to latest without the need for any human intervention, very much like a high level operating system autoupdate.
+`rayjas installer` in autoupdate mode can seamlessly update the `rayjas` program to latest without the need for any human intervention, very much like a high level operating system autoupdate.
 
 ## Requirements
 
-The installer script use mix of `bash` ansd `python 3.7+` to install and update grahil. While bash is available everywhere, you must ensure your system can support `python 3.7 or higher`. The installer will scan the system looking for supported python versions and if not found it will look for them on `apt`/`yum` repositories.
+The installer script use mix of `bash` ansd `python 3.7+` to install and update rayjas. While bash is available everywhere, you must ensure your system can support `python 3.7 or higher`. The installer will scan the system looking for supported python versions and if not found it will look for them on `apt`/`yum` repositories.
 
 * Min CPU Speed: 1 GHZ
 * Min Memory: 256 MB
@@ -45,11 +45,11 @@ sudo yum install git
 git --version
 ```
 
-Now using git clone the repository on your linux system on which you wish tro install grahil - `git clone https://github.com/connessionetech/grahil-installer.git`
+Now using git clone the repository on your linux system on which you wish tro install rayjas - `git clone https://github.com/connessionetech/rayjas-installer.git`
 
 ### Give executable permissions to the installer script
 
-* Execute the following command to switch directory to the installer script and make it executable - `cd grahil-installer && sudo chmod +x *.sh`
+* Execute the following command to switch directory to the installer script and make it executable - `cd rayjas-installer && sudo chmod +x *.sh`
 
 **Now we are ready to run the installer!!**
 
@@ -62,18 +62,18 @@ Now using git clone the repository on your linux system on which you wish tro in
 
 * The script will then request permission by prompting for superuser password. Enter password to alow the script to continue.
 
-* If everything is fine the script will not prompt you for anything else. It will install the program and then register a systemd service for it automatically by the name `grahil.service`. The service is auto-started post installation. However you can still use `systemctl` to start and stop it manually.
+* If everything is fine the script will not prompt you for anything else. It will install the program and then register a systemd service for it automatically by the name `rayjas.service`. The service is auto-started post installation. However you can still use `systemctl` to start and stop it manually.
 
 Stop Service:
 
 ```bash
-sudo systemctl stop grahil.service
+sudo systemctl stop rayjas.service
 ```
 
 Start Service:
 
 ```bash
-sudo systemctl start grahil.service
+sudo systemctl start rayjas.service
 ```
 
 ### Arguments
@@ -92,7 +92,7 @@ sudo systemctl start grahil.service
 
 ### The Manifest
 
-The manifest is a JSON fornmatted file which is used to describe the installation of `grahil` core program. It defines various aspects of the installation such as supported python versions, release date, release version, package download url, package signature (md5 hash) etc. The installer will reade manifest and parse it before starting with the installation/updation mechanism.
+The manifest is a JSON fornmatted file which is used to describe the installation of `rayjas` core program. It defines various aspects of the installation such as supported python versions, release date, release version, package download url, package signature (md5 hash) etc. The installer will reade manifest and parse it before starting with the installation/updation mechanism.
 
 
 ```json
@@ -106,7 +106,7 @@ The manifest is a JSON fornmatted file which is used to describe the installatio
         "platform": {
             "x86_64": {
                 "enabled": true,
-                "url": "https://*****************/************/grahil.zip",
+                "url": "https://*****************/************/rayjas.zip",
                 "md5": "6dafac4c971e23b0beee60ce92a072f4",
                 "dependencies": {
                     "interpreters": "3.7,3.8"
@@ -163,9 +163,9 @@ From the installer's standpoint, the `installation` process can broadly be broke
 * Install all the prerequisites on the system
 * Fetch and parse the build manifest from cloud
 * Use information from manifest to discover or install a supported version of python on the system (if needed)
-* Download the grahil payload & install to proper location
+* Download the rayjas payload & install to proper location
 * Setup python virtual environment for the python version identified or installed earlier
-* Create a systemd service for grahil using the main entry file & virtual environment interpreter
+* Create a systemd service for rayjas using the main entry file & virtual environment interpreter
 
 ### Modules
 ---
@@ -180,7 +180,7 @@ Where `-i` instructs to run script in installation mode & the `-m` flag selects 
 
 `<module-name>` refers to the name of the module you are trying to install. the module should exist in the repository (should be supported officially). Custom module installation is not support via this installer at the moment.
 
-__You need to restart grahil service for changes to take effect.__
+__You need to restart rayjas service for changes to take effect.__
 
 #### Removing modules
 
@@ -192,7 +192,7 @@ Where `-r` instructs to run script in removal mode & the `-m` flag selects modul
 
 `<module-name>` refers to the name of the module you are trying to remove. If the module and its configuration exist in the install location it will be removed.
 
-__You need to restart grahil service for changes to take effect.__
+__You need to restart rayjas service for changes to take effect.__
 
 ### Update Process
 ---
@@ -217,11 +217,11 @@ From the installer's standpoint, the `update` process can broadly be broken down
 #### SmartMerge
 
 
-`Smartmerge` is a python program that is used to merge configuration files from existing version of the software and the latest version of the software downloaded, without losing the edited configurations. Smartmerge script reuses the grahil virtual environment for its dependencies and hence does not require setting up a new python virtual environment.
+`Smartmerge` is a python program that is used to merge configuration files from existing version of the software and the latest version of the software downloaded, without losing the edited configurations. Smartmerge script reuses the rayjas virtual environment for its dependencies and hence does not require setting up a new python virtual environment.
 
 #### AutoUpdater (experimental)
 
-Autoupdate is a useful (experimental) feature of this installer which lets you update your existing grahil installation automatically in an unattended manner.
+Autoupdate is a useful (experimental) feature of this installer which lets you update your existing rayjas installation automatically in an unattended manner.
 
 To activate autoupdater :>
 
@@ -254,7 +254,7 @@ TO DO
 From the installer's standpoint, the `uninstall` process can be broken down into the following steps:
 
 * Check system for existing installation
-* Remove grahil core & modules
+* Remove rayjas core & modules
 * Remove any virtual environment created
 * Remove any systemd service created
 * Remove all installation data
@@ -276,7 +276,7 @@ PYTHON_DEFAULT_VENV_NAME="virtualenvs"
 # GENERAL SETTINGS
 # -------------------
 PROGRAM_INSTALL_LOCATION=~/
-PROGRAM_NAME=grahil
+PROGRAM_NAME=rayjas
 
 
 # SERVICE
@@ -292,7 +292,7 @@ PROGRAM_CONFIGURATION_MERGER=/python/smartmerge.py
 
 # LOGGING
 # ----------------------------------------
-LOG_FILE_NAME=grahil_installer.log
+LOG_FILE_NAME=rayjas_installer.log
 LOGGING=true
 
 ```
@@ -303,10 +303,10 @@ LOGGING=true
 |   PYTHON_DEFAULT_VENV_NAME	|   virtualenvs	|   Default name for virtual environment container directory. The virtual environment will be created in this directory by the same name as the program.	|   	|   	|
 |   PYTHON_VIRTUAL_ENV_LOCATION	|   ~/ (user home)	|  Path to virttual environment container directory 	|   	|   	|
 |   PROGRAM_INSTALL_LOCATION	|   ~/ (user home)	|  The installation path for the program. 	|   	|   	|
-|   PROGRAM_NAME	|   grahil	|   The name of the program. Thsi si used in directory creation as well as service creation.	|   	|   	|
+|   PROGRAM_NAME	|   rayjas	|   The name of the program. Thsi si used in directory creation as well as service creation.	|   	|   	|
 |   PROGRAM_INSTALL_AS_SERVICE	|   true	|   Determined whether the program shoudl be installed as a system service.Boolean true or false.	|   	|   	|
 |   PROGRAM_SERVICE_AUTOSTART	|   false	|   Determines whether the system service (if installed) should autostart with the operating system. Boolean true or false.	|   	|   	|
-|   LOG_FILE_NAME	|   grahil_installer.log	|   Name of the log file generated by the installer	|   	|   	|
+|   LOG_FILE_NAME	|   rayjas_installer.log	|   Name of the log file generated by the installer	|   	|   	|
 |   LOGGING	|   true	|   Determined whether installer logging is enabled. Boolean true or false.	|   	|   	|
 
 ## Future Roadmap
