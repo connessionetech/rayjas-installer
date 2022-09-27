@@ -1768,6 +1768,8 @@ unpack_runtime_libraries()
 get_install_info()
 {
 	local UNIQ=$(date +%s)
+
+	local response=$(curl --write-out '%{http_code}' --silent --output /dev/null "$PROGRAM_MANIFEST_LOCATION?$UNIQ")	
 	local manifestdata=$(curl -H 'Cache-Control: no-cache' -sk "$PROGRAM_MANIFEST_LOCATION?$UNIQ")
 
 	if [ -z "$manifestdata" ]; then 
@@ -4176,7 +4178,7 @@ load_configuration()
 
 	
 	if [ -z ${PROGRAM_MANIFEST_LOCATION+x} ]; then 
-		PROGRAM_MANIFEST_LOCATION=$(echo 'aHR0cHM6Ly9ncmFoaWwuczMuYW1hem9uYXdzLmNvbS9tYW5pZmVzdC5qc29uCg==' | base64 --decode)
+		PROGRAM_MANIFEST_LOCATION=$(echo 'aHR0cHM6Ly9yYXlqYXMuczMuYW1hem9uYXdzLmNvbS9tYW5pZmVzdC5qc29u' | base64 --decode)
 	fi
 	
 
