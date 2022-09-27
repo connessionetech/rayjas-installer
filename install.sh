@@ -1770,37 +1770,46 @@ get_install_info()
 	local UNIQ=$(date +%s)
 
 	local response=$(curl --write-out '%{http_code}' --silent --output /dev/null "$PROGRAM_MANIFEST_LOCATION?$UNIQ")	
-	local manifestdata=$(curl -H 'Cache-Control: no-cache' -sk "$PROGRAM_MANIFEST_LOCATION?$UNIQ")
 
-	if [ -z "$manifestdata" ]; then 
-		echo "Failed to get manifest data" && exit
-	fi
+	if [[ "$response" -eq 200 ]]; then
+
+		local manifestdata=$(curl -H 'Cache-Control: no-cache' -sk "$PROGRAM_MANIFEST_LOCATION?$UNIQ")
+
+		if [ -z "$manifestdata" ]; then 
+			echo "Failed to get manifest data" && exit
+		fi
 
 
-	if [ "$PLATFORM_ARCH" == "x86_64" ]; then
-		eval "$(jq -M -r '@sh "package_enabled=\(.payload.platform.x86_64.enabled) package_url=\(.payload.platform.x86_64.url) package_hash=\(.payload.platform.x86_64.md5) package_version=\(.payload.version) supported_interpreters=\(.payload.platform.x86_64.dependencies.interpreters)"' <<< "$manifestdata")"	
-	elif [ "$PLATFORM_ARCH" == "arm64" ]; then
-		eval "$(jq -M -r '@sh "package_enabled=\(.payload.platform.arm64.enabled) package_url=\(.payload.platform.arm64.url) package_hash=\(.payload.platform.arm64.md5) package_version=\(.payload.version) supported_interpreters=\(.payload.platform.arm64.dependencies.interpreters)"' <<< "$manifestdata")"	
-	else
-		lecho_err "Unknown/unsupported cpu architecture!!.Contact support for further assistance."
-		exit
-	fi
+		if [ "$PLATFORM_ARCH" == "x86_64" ]; then
+			eval "$(jq -M -r '@sh "package_enabled=\(.payload.platform.x86_64.enabled) package_url=\(.payload.platform.x86_64.url) package_hash=\(.payload.platform.x86_64.md5) package_version=\(.payload.version) supported_interpreters=\(.payload.platform.x86_64.dependencies.interpreters)"' <<< "$manifestdata")"	
+		elif [ "$PLATFORM_ARCH" == "arm64" ]; then
+			eval "$(jq -M -r '@sh "package_enabled=\(.payload.platform.arm64.enabled) package_url=\(.payload.platform.arm64.url) package_hash=\(.payload.platform.arm64.md5) package_version=\(.payload.version) supported_interpreters=\(.payload.platform.arm64.dependencies.interpreters)"' <<< "$manifestdata")"	
+		else
+			lecho_err "Unknown/unsupported cpu architecture!!.Contact support for further assistance."
+			exit
+		fi
 
-	# if package is disabled notify and exit	
-	if [ "$package_enabled" = false ] ; then
-		lecho_err "Package installation is unavailable or disabled.Contact support for further assistance."
-		exit
-	fi
 
+		# if package is disabled notify and exit	
+		if [ "$package_enabled" = false ] ; then
+			lecho_err "Package installation is unavailable or disabled.Contact support for further assistance."
+			exit
+		fi
+
+			
+		PROGRAM_ARCHIVE_LOCATION=$package_url
+		PROGRAM_VERSION=$package_version
+		PROGRAM_HASH=$package_hash
 		
-	PROGRAM_ARCHIVE_LOCATION=$package_url
-	PROGRAM_VERSION=$package_version
-	PROGRAM_HASH=$package_hash
+		# Change comma (,) to whitespace and add under braces
+		PROGRAM_SUPPORTED_INTERPRETERS=(`echo $supported_interpreters | tr ',' ' '`)
+		echo "Supported interpreters: ${PROGRAM_SUPPORTED_INTERPRETERS[@]}"
+		echo "Version: $PROGRAM_VERSION"
+	else
+		lecho_err "Payload information is unavailable or cannot be accessed.Contact support for further assistance."
+		exit
+	fi
 	
-	# Change comma (,) to whitespace and add under braces
-	PROGRAM_SUPPORTED_INTERPRETERS=(`echo $supported_interpreters | tr ',' ' '`)
-	echo "Supported interpreters: ${PROGRAM_SUPPORTED_INTERPRETERS[@]}"
-	echo "Version: $PROGRAM_VERSION"
 }
 
 
