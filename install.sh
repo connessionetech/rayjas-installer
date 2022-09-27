@@ -652,6 +652,7 @@ install_python_additionals_deb()
 {
 	local ver=$1
 	sudo apt install -y python3-pip python$ver-dev python$ver-venv python3-venv
+	sudo apt install -y python3-testresources
 }
 
 
@@ -1416,6 +1417,7 @@ check_create_virtual_environment()
 
 	python=$(which python$PYTHON_VERSION)
 	pipver=$(which pip3)
+	
 
 	$python -m pip install --upgrade pip
 	$pipver install --upgrade setuptools wheel	
