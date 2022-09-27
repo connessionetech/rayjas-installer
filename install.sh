@@ -1807,6 +1807,7 @@ get_install_info()
 		PROGRAM_SUPPORTED_INTERPRETERS=(`echo $supported_interpreters | tr ',' ' '`)
 		echo "Supported interpreters: ${PROGRAM_SUPPORTED_INTERPRETERS[@]}"
 		echo "Version: $PROGRAM_VERSION"
+
 	else
 		lecho_err "Payload information is unavailable or cannot be accessed.Contact support for further assistance."
 		exit
@@ -3341,7 +3342,39 @@ auto_install_program()
 
 
 #############################################
-# Starts rayjas service using systemctl
+# Starts service on user prompt using systemctl
+# 
+# GLOBALS:
+#
+# ARGUMENTS:
+#
+# RETURN:
+#	
+#############################################	
+prompt_start_service()
+{	
+	if is_service_installed; then
+		lecho "Do you want to start the service now?"
+		read -r -p "Are you sure? [y/N] " response
+
+		case $response in
+		[yY][eE][sS]|[yY]) 
+		start_grahil_service
+		;;
+		*)
+		lecho "No problem. Service will be autostarted on next system start. You can also manually start it from shell."
+		lecho "For more info please refer to documentation!"
+		;;
+		esac
+	else
+		lecho_err "Service not found/installed!"
+	fi
+}
+
+
+
+#############################################
+# Starts service using systemctl
 # 
 # GLOBALS:
 #		PROGRAM_SERVICE_LOCATION, PROGRAM_SERVICE_NAME
@@ -4046,6 +4079,8 @@ post_download_install()
 
 				if $PROGRAM_SERVICE_AUTOSTART; then
 					start_service
+				else
+					prompt_start_service
 				fi
 			fi
 
@@ -4269,9 +4304,15 @@ detect_system()
 	    IS_64_BIT=1
 	    os_bits="64 Bit"
 	    ;;
-	aarch64|arm64)
+	arm64)
 		PLATFORM_ARCH="arm64"
-	    ARCH=arm  # IA32 or Intel32 or whatever
+	    ARCH=arm 
+	    IS_64_BIT=1
+	    os_bits="64 Bit"
+	    ;;
+	aarch64)
+		PLATFORM_ARCH="aarch64"
+	    ARCH=arm
 	    IS_64_BIT=1
 	    os_bits="64 Bit"
 	    ;;
@@ -4311,7 +4352,7 @@ detect_system()
 	lecho "Downloads directory: $PROGRAM_DEFAULT_DOWNLOAD_FOLDER"
 
 	
-	if [[ $OS_NAME == *"Ubuntu"* ]]; then
+	if [[ $OS_NAME == *"Ubuntu"* || $OS_NAME == *"Debian"* ]]; then
 	OS_TYPE=$OS_DEB
 	elif [[ $OS_NAME == *"Raspbian"* ]]; then
 	OS_TYPE=$OS_DEB
