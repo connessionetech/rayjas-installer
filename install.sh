@@ -2341,11 +2341,13 @@ install_profile()
 				local module_conf_source_path="$profile_package_path/modules/conf"
 				local scripts_source_path="$profile_package_path/scripts"
 				local rules_source_path="$profile_package_path/rules"
+				local layout_source_path="$profile_package_path/layout.json"
 				
 				local module_install_path="$base_dir/oneadmin/modules"
 				local module_conf_install_path="$base_dir/oneadmin/modules/conf"
 				local scripts_install_path="$base_dir/scripts"
 				local rules_install_path="$base_dir/rules"
+				local layout_install_path="$base_dir/oneadmin/ui/admin/layout.json"
 
 				# extract profile archive to a tmp location
 
@@ -2539,6 +2541,12 @@ install_profile()
 						fi
 
 					done
+
+
+					# install layout to appropriate location if exists in profile
+					if [ -f "$layout_source_path" ]; then
+						sudo mv $layout_source_path $layout_install_path
+					fi
 
 
 					# once eveything is done mark current profile selection 
